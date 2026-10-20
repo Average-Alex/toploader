@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Toploader</title>
+<meta name="description" content="Buy, sell, and trade trading cards with friends: Pokémon, sports, Magic, Yu-Gi-Oh!, and more.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,600..900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a card-shop counter. One toolbar, then a binder grid of listings
+   shown as graded "slabs" (label on top, card below). Sheets slide up for
+   signing in, listing a card, and a listing's details. */
+:root {
+  color-scheme: light;
+  --paper: #eceff4;
+  --panel: #ffffff;
+  --ink: #161c26;
+  --muted: #5b6577;
+  --line: #cdd4df;
+  --case: #9aa6b8;
+  --label: #c8202c;
+  --label-ink: #ffffff;
+  --sale: #1f7a4d;
+  --trade: #2d5bd1;
+  --warn: #9a5b00;
+  --holo: linear-gradient(115deg, #7fe7ff, #c79bff 30%, #ffb1d6 50%, #ffe58a 70%, #8cffc8);
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --paper: #0f131a; --panel: #18202b; --ink: #e8edf5; --muted: #98a3b5; --line: #2b3545;
+    --case: #4a586d; --label: #ff4d5a; --label-ink: #1a0508; --sale: #4cc98a; --trade: #7ea2ff; --warn: #f0b04a;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--trade); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+/* ---------- Header ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
+  padding-block: 14px; background: var(--paper); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand svg { flex: none; }
+.brand h1 { margin: 0; font: 900 26px/1 var(--display); font-stretch: 125%; letter-spacing: -0.01em; }
+.tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.tab { border: 0; background: none; padding: 7px 14px; border-radius: 999px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.account { display: flex; align-items: center; gap: 8px; }
+.account .me { font-size: 13px; color: var(--muted); max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
+  padding: 9px 14px; font-weight: 600; cursor: pointer; text-decoration: none; color: var(--ink);
+}
+.btn:hover { border-color: var(--case); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn.primary { background: var(--label); border-color: var(--label); color: var(--label-ink); }
+.btn.holo { background: var(--holo); border: 0; color: #161c26; }
+.btn.ghost { background: none; }
+.btn.danger { color: var(--label); }
+.btn.small { padding: 6px 10px; font-size: 13px; }
+
+.notice { margin: 16px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+.notice b { color: var(--ink); }
+
+/* ---------- Browse ---------- */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0 14px; }
+.search-wrap { position: relative; flex: 1 1 220px; min-width: 0; display: flex; }
+.search { flex: 1 1 auto; width: 100%; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.suggest {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 6; margin: 0; padding: 4px; list-style: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 28px rgb(10 14 20 / 0.18);
+  max-height: 320px; overflow-y: auto;
+}
+.suggest li { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 10px; padding: 7px 10px; border-radius: 7px; cursor: pointer; }
+.suggest li[aria-selected="true"] { background: var(--paper); }
+.suggest .s-text { overflow-wrap: anywhere; }
+.suggest .s-text mark { background: none; color: inherit; font-weight: 700; }
+.suggest .s-kind { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.suggest .s-count { grid-column: 2; grid-row: 1 / span 2; font: 600 12px/1 var(--mono); color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+select.sel { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.count { color: var(--muted); font-size: 13px; margin: 0 0 12px; font-variant-numeric: tabular-nums; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 18px; }
+.slab {
+  display: flex; flex-direction: column; text-align: left; padding: 8px;
+  background: var(--panel); border: 2px solid var(--case); border-radius: 12px; cursor: pointer;
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--case) 18%, transparent);
+  transition: transform 0.15s ease;
+}
+.slab:hover { transform: translateY(-2px); }
+.slab.sold { opacity: 0.6; }
+.slab-label { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: start; padding: 7px 8px; border-radius: 6px; background: var(--paper); border-top: 4px solid var(--label); }
+.slab-title { font: 800 14px/1.2 var(--display); font-stretch: 112%; overflow-wrap: anywhere; }
+.slab-sub { grid-column: 1; font-size: 11.5px; color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
+.grade { grid-row: 1 / span 2; grid-column: 2; font: 700 12px/1 var(--mono); text-align: center; padding: 4px 6px; border: 1.5px solid var(--ink); border-radius: 4px; }
+.grade small { display: block; font-size: 9px; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 2px; }
+.window { margin-top: 8px; aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden; background: var(--paper); display: grid; place-items: center; }
+.window img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nophoto { color: var(--muted); font-size: 12px; text-align: center; padding: 12px; }
+.slab-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.price { font: 700 17px/1 var(--mono); color: var(--label); font-variant-numeric: tabular-nums; }
+.mode { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; }
+.mode.sale { color: var(--sale); background: color-mix(in srgb, var(--sale) 14%, transparent); }
+.mode.trade { color: var(--trade); background: color-mix(in srgb, var(--trade) 14%, transparent); }
+.mode.sold { color: var(--muted); background: color-mix(in srgb, var(--muted) 16%, transparent); }
+.seller { font-size: 12px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
+
+.empty { text-align: center; padding: 48px 16px; border: 2px dashed var(--line); border-radius: 12px; color: var(--muted); }
+.empty h2 { margin: 0 0 6px; color: var(--ink); font: 800 22px/1.2 var(--display); font-stretch: 118%; text-wrap: balance; }
+.empty p { margin: 0 auto 16px; max-width: 46ch; }
+
+/* ---------- Value lookup ---------- */
+.lookup { max-width: 720px; margin-top: 20px; }
+.lookup h2 { margin: 0 0 4px; font: 900 28px/1.1 var(--display); font-stretch: 122%; text-wrap: balance; }
+.lookup .lede { margin: 0 0 16px; color: var(--muted); max-width: 60ch; }
+.lookup-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 560px) { .lookup-form { grid-template-columns: 1fr; } }
+.lookup-form .wide { grid-column: 1 / -1; }
+.lookup-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.lookup-query { font: 500 13px/1.4 var(--mono); color: var(--muted); margin: 12px 0 0; overflow-wrap: anywhere; }
+.tips { margin: 20px 0 0; padding: 12px 14px; border-left: 3px solid var(--warn); background: var(--panel); border-radius: 0 8px 8px 0; font-size: 14px; }
+.tips ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* ---------- Sheets ---------- */
+dialog.sheet { width: min(640px, calc(100% - 24px)); max-height: calc(100% - 24px); padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--ink); }
+dialog.sheet.narrow { width: min(420px, calc(100% - 24px)); }
+dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+.sheet-head h2 { margin: 0; font: 900 20px/1.1 var(--display); font-stretch: 118%; }
+.sheet-body { padding: 16px 18px 20px; display: grid; gap: 14px; }
+.field { display: grid; gap: 5px; }
+.field > span { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.field input, .field select, .field textarea { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); width: 100%; min-width: 0; }
+.field textarea { min-height: 76px; resize: vertical; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+.shot-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hidden-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumb { position: relative; width: 74px; aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--paper); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgb(0 0 0 / 0.65); color: #fff; font-size: 13px; line-height: 1; cursor: pointer; }
+.form-error { color: var(--label); font-weight: 600; min-height: 1.5em; margin: 0; }
+.form-note { color: var(--muted); font-size: 13px; margin: 0; }
+.sheet-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.switch { background: none; border: 0; padding: 0; color: var(--trade); font-weight: 600; cursor: pointer; text-decoration: underline; }
+
+.detail-main { aspect-ratio: 5 / 7; max-height: 60vh; margin: 0 auto; border-radius: 10px; overflow: hidden; background: var(--paper); }
+.detail-main img { width: 100%; height: 100%; object-fit: contain; }
+.detail-strip { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.detail-strip button { width: 46px; aspect-ratio: 5 / 7; padding: 0; border: 2px solid transparent; border-radius: 5px; overflow: hidden; cursor: pointer; background: var(--paper); }
+.detail-strip button[aria-current="true"] { border-color: var(--label); }
+.detail-strip img { width: 100%; height: 100%; object-fit: cover; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.contact { padding: 10px 12px; border-radius: 8px; background: var(--paper); overflow-wrap: anywhere; }
+.safety { font-size: 13px; color: var(--muted); margin: 0; }
+
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
+
+@media (prefers-reduced-motion: reduce) { .slab { transition: none; } .slab:hover { transform: none; } }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="30" height="38" viewBox="0 0 30 38" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="27" height="35" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect>
+        <rect x="5" y="6" width="20" height="26" rx="2" fill="#c8202c"></rect>
+        <rect x="8" y="9" width="14" height="9" rx="1" fill="#ffffff" opacity="0.85"></rect>
+      </svg>
+      <h1>Toploader</h1>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-browse" aria-selected="true" data-view="browse">Browse</button>
+      <button class="tab" role="tab" id="tab-value" aria-selected="false" data-view="value">Value lookup</button>
+      <button class="tab" role="tab" id="tab-mine" aria-selected="false" data-view="mine">My cards</button>
+    </nav>
+    <div class="account" id="account"></div>
+    <button class="btn primary" id="new-listing">+ List a card</button>
+  </header>
+
+  <p class="notice" id="notice" hidden></p>
+
+  <section id="view-list">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input id="q" class="search" type="search" placeholder="Search cards, sets, players…" aria-label="Search listings"
+          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="q-list" autocomplete="off">
+        <ul id="q-list" class="suggest" role="listbox" aria-label="Suggestions" hidden></ul>
+      </div>
+      <select id="sort" class="sel" aria-label="Sort">
+        <option value="new">Newest first</option>
+        <option value="low">Price: low to high</option>
+        <option value="high">Price: high to low</option>
+      </select>
+    </div>
+    <div class="toolbar" style="margin-top:0">
+      <div class="chips" id="cat-chips" aria-label="Card type"></div>
+      <div class="chips" id="mode-chips" aria-label="Sale or trade"></div>
+    </div>
+    <p class="count" id="count"></p>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <section id="view-value" class="lookup" hidden>
+    <h2>What's this card worth?</h2>
+    <p class="lede">Type the card in, then check what it really sold for. Sold prices are the best guide: what people paid, not what sellers are asking.</p>
+    <div class="lookup-form">
+      <label class="field wide"><span>Card or player</span><input id="v-name" placeholder="e.g. Charizard, Paul Skenes, Black Lotus"></label>
+      <label class="field"><span>Set or year</span><input id="v-set" placeholder="e.g. Base Set, 2024 Panini Prizm"></label>
+      <label class="field"><span>Card number</span><input id="v-number" placeholder="e.g. 4/102, #118"></label>
+      <label class="field"><span>Version</span>
+        <select id="v-version">
+          <option value="">Regular / not sure</option>
+          <option value="holo">Foil / holo</option>
+          <option value="reverse holo">Reverse holo</option>
+          <option value="refractor">Refractor</option>
+          <option value="prizm">Prizm / parallel</option>
+          <option value="1st edition">1st Edition</option>
+          <option value="rookie">Rookie card</option>
+          <option value="auto">Autograph</option>
+        </select>
+      </label>
+      <label class="field"><span>Grade</span><input id="v-grade" placeholder="Optional: PSA 10, BGS 9.5"></label>
+    </div>
+    <div class="lookup-links" id="v-links"></div>
+    <p class="lookup-query" id="v-query"></p>
+    <div class="tips">
+      <b>Getting an accurate price</b>
+      <ul>
+        <li>Match the exact version. Foils, parallels, and numbered cards can sell for 10 to 25 times the regular card.</li>
+        <li>Look at several recent sales in the same condition, not the single highest one.</li>
+        <li>Graded cards (PSA, BGS, CGC) sell for very different prices than raw ones.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<!-- Sign in / create account -->
+<dialog class="sheet narrow" id="sheet-auth" aria-labelledby="auth-title">
+  <form id="auth-form">
+    <div class="sheet-head">
+      <h2 id="auth-title">Sign in</h2>
+      <button class="btn ghost" type="button" id="auth-close" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <label class="field" id="auth-name-field" hidden><span>Display name</span><input id="auth-name" maxlength="40" placeholder="Shown on your listings" autocomplete="nickname"></label>
+      <label class="field"><span>Email</span><input id="auth-email" type="email" required autocomplete="email"></label>
+      <label class="field"><span>Password</span><input id="auth-password" type="password" required minlength="6" autocomplete="current-password"></label>
+      <p class="form-error" id="auth-error" role="alert"></p>
+      <div class="sheet-foot">
+        <button class="btn primary" type="submit" id="auth-submit">Sign in</button>
+      </div>
+      <p class="form-note" id="auth-switch-line"></p>
+    </div>
+  </form>
+</dialog>
+
+<!-- List a card -->
+<dialog class="sheet" id="sheet-new" aria-labelledby="new-title">
+  <form id="new-form">
+    <div class="sheet-head">
+      <h2 id="new-title">List a card</h2>
+      <button class="btn ghost" type="button" id="new-close" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <span>Photos (front and back)</span>
+        <div class="thumbs" id="new-thumbs"></div>
+        <div class="shot-actions" style="margin-top:4px">
+          <label class="btn" for="new-camera">Take photo</label>
+          <label class="btn ghost" for="new-file">Add from library</label>
+        </div>
+        <input class="hidden-input" id="new-camera" type="file" accept="image/*" capture="environment">
+        <input class="hidden-input" id="new-file" type="file" accept="image/*" multiple>
+      </div>
+      <label class="field"><span>Card name</span><input id="f-title" required maxlength="80" placeholder="e.g. Charizard, LeBron James Rookie"></label>
+      <div class="row2">
+        <label class="field"><span>Type</span><select id="f-category"></select></label>
+        <label class="field"><span>Set or series</span><input id="f-set" maxlength="60" placeholder="e.g. Base Set, 2003 Topps Chrome"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Year</span><input id="f-year" inputmode="numeric" maxlength="4" placeholder="1999"></label>
+        <label class="field"><span>Card number</span><input id="f-number" maxlength="20" placeholder="4/102"></label>
+      </div>
+      <label class="field"><span>Version or parallel</span><input id="f-version" maxlength="60" placeholder="Optional: Foil, Purple Prizm, 23/99, 1st Edition"></label>
+      <div class="row2">
+        <label class="field"><span>Condition</span>
+          <select id="f-condition">
+            <option value="NM">Near Mint</option>
+            <option value="M">Mint</option>
+            <option value="LP">Lightly Played</option>
+            <option value="MP">Moderately Played</option>
+            <option value="HP">Heavily Played</option>
+            <option value="DMG">Damaged</option>
+            <option value="GRADED">Graded (slabbed)</option>
+          </select>
+        </label>
+        <label class="field" id="grade-field" hidden><span>Grade</span><input id="f-grade" maxlength="16" placeholder="PSA 9"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Selling or trading</span>
+          <select id="f-mode">
+            <option value="sale">For sale</option>
+            <option value="trade">For trade</option>
+            <option value="both">Sale or trade</option>
+          </select>
+        </label>
+        <label class="field" id="price-field"><span>Asking price (USD)</span><input id="f-price" inputmode="decimal" placeholder="25.00"></label>
+      </div>
+      <label class="field" id="wants-field" hidden><span>Looking for in trade</span><input id="f-wants" maxlength="120" placeholder="e.g. Umbreon VMAX, any Jordan rookie"></label>
+      <label class="field"><span>Notes</span><textarea id="f-notes" maxlength="500" placeholder="Centering, whitening, edition, anything a buyer should know."></textarea></label>
+      <label class="field"><span>How to reach you</span><input id="f-contact" required maxlength="120" placeholder="e.g. Instagram @handle, or find me at lunch"></label>
+      <p class="form-note">Your contact info is public. Don't post your phone number or home address.</p>
+      <p class="form-error" id="new-error" role="alert"></p>
+      <div class="sheet-foot">
+        <button class="btn ghost" type="button" id="new-cancel">Cancel</button>
+        <button class="btn primary" type="submit" id="new-save">Post listing</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- A listing's details -->
+<dialog class="sheet" id="sheet-detail" aria-labelledby="detail-title">
+  <div class="sheet-head">
+    <h2 id="detail-title">Listing</h2>
+    <button class="btn ghost" type="button" id="detail-close" aria-label="Close">✕</button>
+  </div>
+  <div class="sheet-body" id="detail-body"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const CATEGORIES = ["Pokémon", "Sports", "Magic", "Yu-Gi-Oh!", "One Piece", "Other"];
+  const COND = { M: "Mint", NM: "Near Mint", LP: "Lightly Played", MP: "Moderately Played", HP: "Heavily Played", DMG: "Damaged", GRADED: "Graded" };
+  const MAX_PHOTOS = 4;
+  const BUCKET = "card-photos";
+
+  // Small DOM builder: text always goes in as text, never as HTML.
+  function h(tag, attrs = {}, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+    return el;
+  }
+  const money = (n) => (n === null || n === undefined || !isFinite(n)) ? "" : "$" + (n >= 100 ? Math.round(n).toLocaleString("en-US") : Number(n).toFixed(2).replace(/\.00$/, ""));
+  const toast = (text) => {
+    const t = $("toast");
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => (t.hidden = true), 3200);
+  };
+
+  // ---------- Connecting ----------
+  const cfg = window.TOPLOADER_CONFIG || {};
+  const sb = cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
+  const photoUrl = (path) => sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+
+  const state = { view: "browse", cat: "All", mode: "all", q: "", sort: "new", listings: [], loaded: false, user: null };
+  const isMine = (l) => Boolean(state.user) && l.user_id === state.user.id;
+  const myName = () => state.user?.user_metadata?.name || (state.user?.email || "").split("@")[0] || "A collector";
+
+  function showNotice(...parts) {
+    const n = $("notice");
+    n.hidden = !parts.length;
+    n.replaceChildren(...parts);
+  }
+
+  async function loadListings() {
+    const { data, error } = await sb.from("listings").select("*").order("created_at", { ascending: false }).limit(500);
+    state.loaded = true;
+    if (error) {
+      showNotice(h("b", {}, "Couldn't load listings. "), "Check your connection and reload the page.");
+      return render();
+    }
+    showNotice();
+    state.listings = data || [];
+    render();
+  }
+
+  // ---------- Account ----------
+  function renderAccount() {
+    const box = $("account");
+    if (!sb) return box.replaceChildren();
+    if (state.user) box.replaceChildren(h("span", { class: "me" }, myName()), h("button", { class: "btn small ghost", onclick: signOut }, "Sign out"));
+    else box.replaceChildren(h("button", { class: "btn", onclick: () => openAuth(false) }, "Sign in"));
+  }
+
+  let creating = false;
+  function openAuth(create) {
+    creating = create;
+    $("auth-title").textContent = create ? "Create an account" : "Sign in";
+    $("auth-submit").textContent = create ? "Create account" : "Sign in";
+    $("auth-name-field").hidden = !create;
+    $("auth-password").autocomplete = create ? "new-password" : "current-password";
+    $("auth-switch-line").replaceChildren(
+      create ? "Already have an account? " : "New here? ",
+      h("button", { class: "switch", type: "button", onclick: () => openAuth(!create) }, create ? "Sign in" : "Create an account"));
+    $("auth-error").textContent = "";
+    if (!$("sheet-auth").open) $("sheet-auth").showModal();
+  }
+  $("auth-close").addEventListener("click", () => $("sheet-auth").close());
+
+  $("auth-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = $("auth-email").value.trim();
+    const password = $("auth-password").value;
+    const err = $("auth-error");
+    const btn = $("auth-submit");
+    btn.disabled = true;
+    err.textContent = "";
+    try {
+      if (creating) {
+        const name = $("auth-name").value.trim();
+        if (!name) throw new Error("Pick a display name for your listings.");
+        const { data, error } = await sb.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: location.href.split("#")[0] } });
+        if (error) throw error;
+        if (!data.session) {
+          $("sheet-auth").close();
+          return toast("Check your email to confirm your account, then sign in.");
+        }
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      }
+      $("sheet-auth").close();
+      toast(creating ? "Account created" : "Signed in");
+    } catch (e2) {
+      const m = String(e2?.message || "");
+      err.textContent = /invalid login/i.test(m) ? "Wrong email or password."
+        : /already registered/i.test(m) ? "That email already has an account. Sign in instead."
+        : /email not confirmed/i.test(m) ? "Confirm your email first: check your inbox for the link."
+        : /rate limit/i.test(m) ? "Too many tries. Wait a few minutes and try again."
+        : m || "That didn't work. Try again.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function signOut() {
+    await sb.auth.signOut();
+    toast("Signed out");
+    if (state.view === "mine") setView("browse");
+  }
+
+  // ---------- Views ----------
+  function setView(view) {
+    state.view = view;
+    for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t.dataset.view === view));
+    $("view-list").hidden = view === "value";
+    $("view-value").hidden = view !== "value";
+    render();
+  }
+  for (const t of document.querySelectorAll(".tab")) t.addEventListener("click", () => setView(t.dataset.view));
+
+  function renderChips() {
+    $("cat-chips").replaceChildren(...["All", ...CATEGORIES].map((c) =>
+      h("button", { class: "chip", "aria-pressed": String(state.cat === c), onclick: () => { state.cat = c; render(); } }, c)));
+    const modes = [["all", "Sale or trade"], ["sale", "For sale"], ["trade", "For trade"]];
+    $("mode-chips").replaceChildren(...modes.map(([v, label]) =>
+      h("button", { class: "chip", "aria-pressed": String(state.mode === v), onclick: () => { state.mode = v; render(); } }, label)));
+  }
+
+  const pool = () => (state.view === "mine" ? state.listings.filter(isMine) : state.listings.filter((l) => !l.sold));
+
+  function render() {
+    renderChips();
+    renderAccount();
+    if (state.view === "value") return;
+    const grid = $("grid");
+    if (!sb) {
+      $("count").textContent = "";
+      return grid.replaceChildren(empty("Not connected yet", "This site's database hasn't been set up yet. Fill in config.js with the Supabase project's URL and anon key."));
+    }
+    if (state.view === "mine" && !state.user) {
+      $("count").textContent = "";
+      return grid.replaceChildren(empty("Sign in to see your cards", "Your listings show up here once you've posted some.", h("button", { class: "btn primary", onclick: () => openAuth(false) }, "Sign in")));
+    }
+    if (!state.loaded) {
+      $("count").textContent = "";
+      return grid.replaceChildren(empty("Loading listings…", "Cards people have posted show up here."));
+    }
+    let list = pool();
+    if (state.cat !== "All") list = list.filter((l) => l.category === state.cat);
+    if (state.mode !== "all") list = list.filter((l) => l.mode === state.mode || l.mode === "both");
+    const text = state.q.trim().toLowerCase();
+    if (text) list = list.filter((l) => [l.title, l.set_name, l.year, l.number, l.version, l.category, l.notes, l.wants, l.grade].join(" ").toLowerCase().includes(text));
+    if (state.sort !== "new") {
+      list = [...list].sort((a, b) => {
+        if (a.price == null) return 1;
+        if (b.price == null) return -1;
+        return state.sort === "low" ? a.price - b.price : b.price - a.price;
+      });
+    }
+    $("count").textContent = list.length ? `${list.length} card${list.length === 1 ? "" : "s"}` : "";
+    if (!list.length) {
+      const mine = state.view === "mine";
+      return grid.replaceChildren(!pool().length
+        ? empty(mine ? "You haven't listed any cards" : "No cards listed yet",
+            mine ? "Snap a photo of a card you want to sell or trade, and it shows up here and in Browse." : "Be the first: list a card to sell or trade. Take a photo, set a price, and say how people can reach you.",
+            h("button", { class: "btn primary", onclick: openNew }, "+ List a card"))
+        : empty("No cards match", "Try a different search, or clear the filters."));
+    }
+    grid.replaceChildren(...list.map(slab));
+  }
+
+  function empty(title, text, action = null) {
+    return h("div", { class: "empty", style: "grid-column: 1 / -1" }, h("h2", {}, title), h("p", {}, text), action);
+  }
+  const gradeBadge = (l) => l.condition === "GRADED"
+    ? h("div", { class: "grade" }, h("small", {}, "GRADE"), l.grade || "Slab")
+    : h("div", { class: "grade" }, h("small", {}, "COND"), l.condition || "NM");
+  const subline = (l) => [l.set_name, l.year, l.number && "#" + l.number, l.version].filter(Boolean).join(" · ") || l.category;
+  function modeTag(l) {
+    if (l.sold) return h("span", { class: "mode sold" }, "Sold");
+    if (l.mode === "trade") return h("span", { class: "mode trade" }, "Trade");
+    if (l.mode === "both") return h("span", { class: "mode sale" }, "Sale / trade");
+    return h("span", { class: "mode sale" }, "For sale");
+  }
+  const priceText = (l) => (l.price != null && l.mode !== "trade" ? money(Number(l.price)) : "");
+
+  function slab(l) {
+    const photo = l.photos?.[0];
+    return h("button", { class: "slab" + (l.sold ? " sold" : ""), onclick: () => openDetail(l), "aria-label": `${l.title}, ${priceText(l) || "for trade"}` },
+      h("div", { class: "slab-label" }, h("div", { class: "slab-title" }, l.title), h("div", { class: "slab-sub" }, subline(l)), gradeBadge(l)),
+      h("div", { class: "window" }, photo
+        ? h("img", { src: photoUrl(photo), alt: "", loading: "lazy", onerror: (e) => e.target.replaceWith(h("span", { class: "nophoto" }, "Photo unavailable")) })
+        : h("span", { class: "nophoto" }, "No photo")),
+      h("div", { class: "slab-foot" }, h("span", { class: "price" }, priceText(l)), modeTag(l)),
+      h("div", { class: "seller" }, isMine(l) ? "Your listing" : (l.seller_name || "A collector")));
+  }
+
+  $("sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+
+  // ---------- Search suggestions ----------
+  // As you type, suggest things that are actually listed, with how many match.
+  const q = $("q");
+  const qList = $("q-list");
+  let suggestions = [];
+  let active = -1;
+
+  function buildIndex() {
+    const terms = new Map();
+    const addTerm = (text, kind) => {
+      text = String(text || "").trim();
+      if (text.length < 2) return;
+      const key = kind + "|" + text.toLowerCase();
+      const t = terms.get(key) || { text, kind, count: 0 };
+      t.count++;
+      terms.set(key, t);
+    };
+    for (const l of pool()) {
+      addTerm(l.title, "Card");
+      addTerm(l.set_name, "Set");
+      addTerm(l.version, "Version");
+      addTerm(l.year && l.set_name ? `${l.year} ${l.set_name}` : "", "Set");
+      addTerm(l.category, "Type");
+      addTerm(l.condition === "GRADED" ? l.grade : "", "Grade");
+    }
+    return [...terms.values()];
+  }
+
+  function suggest() {
+    const text = q.value.trim().toLowerCase();
+    if (!text) return closeSuggest();
+    const words = text.split(/\s+/);
+    const scored = [];
+    for (const t of buildIndex()) {
+      const lower = t.text.toLowerCase();
+      if (!words.every((w) => lower.includes(w)) || lower === text) continue;
+      const rank = lower.startsWith(text) ? 0 : lower.split(/[\s\-/]+/).some((w) => w.startsWith(words[0])) ? 1 : 2;
+      scored.push({ ...t, rank });
+    }
+    scored.sort((a, b) => a.rank - b.rank || b.count - a.count || a.text.localeCompare(b.text));
+    suggestions = scored.slice(0, 8);
+    active = -1;
+    if (!suggestions.length) return closeSuggest();
+    qList.replaceChildren(...suggestions.map((sug, i) => {
+      const li = h("li", { id: `q-opt-${i}`, role: "option", "aria-selected": "false", onmousedown: (e) => { e.preventDefault(); pick(i); } },
+        h("span", { class: "s-text" }, highlight(sug.text, words[0])),
+        h("span", { class: "s-kind" }, sug.kind),
+        h("span", { class: "s-count" }, String(sug.count)));
+      li.setAttribute("aria-label", `${sug.text}, ${sug.kind}, ${sug.count} listing${sug.count === 1 ? "" : "s"}`);
+      return li;
+    }));
+    qList.hidden = false;
+    q.setAttribute("aria-expanded", "true");
+    q.removeAttribute("aria-activedescendant");
+  }
+  function highlight(text, word) {
+    const i = text.toLowerCase().indexOf(word);
+    if (i < 0 || !word) return text;
+    const frag = document.createDocumentFragment();
+    frag.append(text.slice(0, i), h("mark", {}, text.slice(i, i + word.length)), text.slice(i + word.length));
+    return frag;
+  }
+  function setActive(i) {
+    active = i;
+    [...qList.children].forEach((li, n) => li.setAttribute("aria-selected", String(n === i)));
+    if (i >= 0) {
+      q.setAttribute("aria-activedescendant", `q-opt-${i}`);
+      qList.children[i].scrollIntoView({ block: "nearest" });
+    } else q.removeAttribute("aria-activedescendant");
+  }
+  function pick(i) {
+    const sug = suggestions[i];
+    if (!sug) return;
+    if (sug.kind === "Type" && CATEGORIES.includes(sug.text)) {
+      state.cat = sug.text;
+      q.value = "";
+    } else q.value = sug.text;
+    state.q = q.value;
+    closeSuggest();
+    render();
+  }
+  function closeSuggest() {
+    qList.hidden = true;
+    qList.replaceChildren();
+    suggestions = [];
+    active = -1;
+    q.setAttribute("aria-expanded", "false");
+    q.removeAttribute("aria-activedescendant");
+  }
+  q.addEventListener("input", () => { state.q = q.value; render(); suggest(); });
+  q.addEventListener("focus", () => q.value.trim() && suggest());
+  q.addEventListener("blur", () => setTimeout(closeSuggest, 120));
+  q.addEventListener("keydown", (e) => {
+    if (qList.hidden) {
+      if (e.key === "ArrowDown" && q.value.trim()) { suggest(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === "ArrowDown") { setActive((active + 1) % suggestions.length); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { setActive(active <= 0 ? suggestions.length - 1 : active - 1); e.preventDefault(); }
+    else if (e.key === "Enter" && active >= 0) { pick(active); e.preventDefault(); }
+    else if (e.key === "Escape") { closeSuggest(); e.preventDefault(); }
+  });
+
+  // ---------- Details ----------
+  function openDetail(l) {
+    $("detail-title").textContent = l.title;
+    const photos = l.photos || [];
+    const main = h("div", { class: "detail-main" });
+    const strip = h("div", { class: "detail-strip" });
+    const show = (i) => {
+      main.replaceChildren(photos.length ? h("img", { src: photoUrl(photos[i]), alt: `Photo ${i + 1} of ${l.title}` }) : h("div", { class: "window" }, h("span", { class: "nophoto" }, "No photo")));
+      [...strip.children].forEach((b, n) => b.setAttribute("aria-current", String(n === i)));
+    };
+    photos.forEach((p, i) => strip.append(h("button", { type: "button", "aria-label": `Photo ${i + 1}`, onclick: () => show(i) }, h("img", { src: photoUrl(p), alt: "" }))));
+    show(0);
+
+    const facts = h("dl", { class: "facts" });
+    const add = (k, v) => v && facts.append(h("dt", {}, k), h("dd", {}, v));
+    add("Type", l.category);
+    add("Set", l.set_name);
+    add("Year", l.year);
+    add("Number", l.number && "#" + l.number);
+    add("Version", l.version);
+    add("Condition", l.condition === "GRADED" ? `Graded ${l.grade || ""}`.trim() : COND[l.condition]);
+    add("Price", priceText(l));
+    add("Wants", l.wants);
+    add("Listed", new Date(l.created_at).toLocaleDateString());
+
+    const actions = h("div", { class: "sheet-foot" });
+    if (isMine(l)) {
+      actions.append(
+        h("button", { class: "btn", onclick: () => setSold(l, !l.sold) }, l.sold ? "Mark available" : "Mark sold"),
+        h("button", { class: "btn danger", onclick: () => confirmDelete(l, actions) }, "Delete"));
+    }
+    $("detail-body").replaceChildren(
+      photos.length > 1 ? h("div", {}, main, strip) : main,
+      h("div", { class: "slab-label" }, h("div", { class: "slab-title" }, l.title), h("div", { class: "slab-sub" }, subline(l)), gradeBadge(l)),
+      h("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:8px" }, h("span", { class: "price", style: "font-size:24px" }, priceText(l)), modeTag(l)),
+      facts,
+      l.notes ? h("p", { style: "margin:0;white-space:pre-wrap" }, l.notes) : null,
+      h("div", { class: "contact" }, h("b", {}, (isMine(l) ? "You" : l.seller_name || "Seller") + ": "), l.contact),
+      isMine(l) ? null : h("p", { class: "safety" }, "Meet in a public place, and check the card in person before you pay."),
+      actions);
+    $("sheet-detail").showModal();
+  }
+  $("detail-close").addEventListener("click", () => $("sheet-detail").close());
+
+  async function setSold(l, sold) {
+    const { error } = await sb.from("listings").update({ sold }).eq("id", l.id);
+    if (error) return toast("Couldn't update. Try again.");
+    $("sheet-detail").close();
+    toast(sold ? "Marked sold" : "Marked available");
+    loadListings();
+  }
+
+  function confirmDelete(l, actions) {
+    actions.replaceChildren(
+      h("span", { class: "form-note", style: "margin-right:auto" }, "Delete this listing and its photos?"),
+      h("button", { class: "btn", onclick: () => $("sheet-detail").close() }, "Keep it"),
+      h("button", { class: "btn primary", onclick: async () => {
+        const { error } = await sb.from("listings").delete().eq("id", l.id);
+        if (error) return toast("Couldn't delete. Try again.");
+        if (l.photos?.length) await sb.storage.from(BUCKET).remove(l.photos);
+        $("sheet-detail").close();
+        toast("Listing deleted");
+        loadListings();
+      } }, "Delete"));
+  }
+
+  // ---------- Photos ----------
+  // Shrink to at most 1400px on the long side as JPEG, so uploads are quick.
+  function shrink(file, max = 1400) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * scale);
+        c.height = Math.round(img.naturalHeight * scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob((b) => resolve(b || file), "image/jpeg", 0.86);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
+  // ---------- List a card ----------
+  let draft = [];
+  function openNew() {
+    if (!sb) return toast("The site isn't connected to its database yet.");
+    if (!state.user) {
+      toast("Sign in or create an account to list a card.");
+      return openAuth(false);
+    }
+    $("new-form").reset();
+    draft = [];
+    $("new-error").textContent = "";
+    syncForm();
+    renderThumbs();
+    $("sheet-new").showModal();
+  }
+  $("new-listing").addEventListener("click", openNew);
+  $("new-close").addEventListener("click", () => $("sheet-new").close());
+  $("new-cancel").addEventListener("click", () => $("sheet-new").close());
+  $("f-category").replaceChildren(...CATEGORIES.map((c) => h("option", { value: c }, c)));
+  function syncForm() {
+    $("grade-field").hidden = $("f-condition").value !== "GRADED";
+    const mode = $("f-mode").value;
+    $("price-field").hidden = mode === "trade";
+    $("wants-field").hidden = mode === "sale";
+  }
+  $("f-condition").addEventListener("change", syncForm);
+  $("f-mode").addEventListener("change", syncForm);
+
+  async function addPhotos(files) {
+    for (const file of files) {
+      if (draft.length >= MAX_PHOTOS) { toast(`Up to ${MAX_PHOTOS} photos per listing`); break; }
+      if (!file.type.startsWith("image/")) continue;
+      const blob = await shrink(file);
+      draft.push({ blob, url: URL.createObjectURL(blob) });
+    }
+    renderThumbs();
+  }
+  function renderThumbs() {
+    $("new-thumbs").replaceChildren(...draft.map((p, i) =>
+      h("div", { class: "thumb" }, h("img", { src: p.url, alt: `Photo ${i + 1}` }),
+        h("button", { type: "button", "aria-label": `Remove photo ${i + 1}`, onclick: () => { draft.splice(i, 1); renderThumbs(); } }, "✕"))));
+  }
+  for (const id of ["new-camera", "new-file"]) $(id).addEventListener("change", (e) => { addPhotos([...e.target.files]); e.target.value = ""; });
+
+  $("new-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = $("new-error");
+    const title = $("f-title").value.trim();
+    const contact = $("f-contact").value.trim();
+    const mode = $("f-mode").value;
+    const raw = $("f-price").value.replace(/[$,\s]/g, "");
+    const price = mode === "trade" || raw === "" ? null : Number(raw);
+    if (!title) return (err.textContent = "Add the card's name.");
+    if (!contact) return (err.textContent = "Say how buyers can reach you.");
+    if (price !== null && (!isFinite(price) || price < 0)) return (err.textContent = "Enter the price as a number, like 25 or 12.50.");
+    const save = $("new-save");
+    save.disabled = true;
+    err.textContent = "";
+    const uploaded = [];
+    try {
+      for (const [i, p] of draft.entries()) {
+        save.textContent = `Uploading photo ${i + 1} of ${draft.length}…`;
+        const path = `${state.user.id}/${crypto.randomUUID()}.jpg`;
+        const { error } = await sb.storage.from(BUCKET).upload(path, p.blob, { contentType: "image/jpeg" });
+        if (error) throw { photo: true, error };
+        uploaded.push(path);
+      }
+      save.textContent = "Posting…";
+      const { error } = await sb.from("listings").insert({
+        user_id: state.user.id,
+        seller_name: myName().slice(0, 40),
+        title,
+        category: $("f-category").value,
+        set_name: $("f-set").value.trim(),
+        year: $("f-year").value.trim(),
+        number: $("f-number").value.trim(),
+        version: $("f-version").value.trim(),
+        condition: $("f-condition").value,
+        grade: $("f-condition").value === "GRADED" ? $("f-grade").value.trim() : "",
+        mode,
+        price,
+        wants: mode === "sale" ? "" : $("f-wants").value.trim(),
+        notes: $("f-notes").value.trim(),
+        contact,
+        photos: uploaded,
+      });
+      if (error) throw { error };
+      $("sheet-new").close();
+      toast("Listing posted");
+      await loadListings();
+      setView("mine");
+    } catch (e2) {
+      if (uploaded.length) sb.storage.from(BUCKET).remove(uploaded);
+      err.textContent = e2?.photo ? "A photo didn't upload. Try a smaller photo or remove it." : "Couldn't post. Check your connection and try again.";
+    } finally {
+      save.disabled = false;
+      save.textContent = "Post listing";
+    }
+  });
+
+  // ---------- Value lookup ----------
+  function renderLookup() {
+    const parts = ["v-name", "v-set", "v-number", "v-version", "v-grade"].map((id) => $(id).value.trim()).filter(Boolean);
+    const query = parts.join(" ");
+    const enc = encodeURIComponent(query);
+    if (!$("v-name").value.trim()) {
+      $("v-links").replaceChildren(h("span", { class: "form-note" }, "Type a card or player to get price links."));
+      $("v-query").textContent = "";
+      return;
+    }
+    $("v-links").replaceChildren(
+      h("a", { class: "btn holo", href: `https://www.ebay.com/sch/i.html?LH_Sold=1&LH_Complete=1&_nkw=${enc}`, target: "_blank", rel: "noopener" }, "eBay sold listings ↗"),
+      h("a", { class: "btn", href: `https://www.pricecharting.com/search-products?type=prices&q=${enc}`, target: "_blank", rel: "noopener" }, "PriceCharting ↗"),
+      h("a", { class: "btn", href: `https://www.tcgplayer.com/search/all/product?q=${enc}`, target: "_blank", rel: "noopener" }, "TCGplayer ↗"));
+    $("v-query").textContent = "Searching for: " + query;
+  }
+  for (const id of ["v-name", "v-set", "v-number", "v-grade"]) $(id).addEventListener("input", renderLookup);
+  $("v-version").addEventListener("change", renderLookup);
+
+  // ---------- Start up ----------
+  renderLookup();
+  if (!sb) {
+    state.loaded = true;
+    $("new-listing").hidden = true;
+    return render();
+  }
+  sb.auth.onAuthStateChange((_event, session) => {
+    state.user = session?.user || null;
+    render();
+  });
+  render();
+  loadListings();
+})();
+</script>
+</body>
+</html>
