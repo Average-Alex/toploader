@@ -1,0 +1,1059 @@
+<title>Toploader</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,600..900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a card-shop counter. One toolbar, then a binder grid of listings
+   shown as graded "slabs" (label on top, card below). Sheets slide up for
+   listing a card and for a listing's details. */
+:root {
+  --paper: #eceff4;        /* binder-page grey, cool */
+  --panel: #ffffff;
+  --ink: #161c26;
+  --muted: #5b6577;
+  --line: #cdd4df;
+  --case: #9aa6b8;         /* the clear slab case edge */
+  --label: #c8202c;        /* grading-label red, for prices and the main action */
+  --label-ink: #ffffff;
+  --sale: #1f7a4d;
+  --trade: #2d5bd1;
+  --warn: #9a5b00;
+  --holo: linear-gradient(115deg, #7fe7ff, #c79bff 30%, #ffb1d6 50%, #ffe58a 70%, #8cffc8);
+  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0f131a; --panel: #18202b; --ink: #e8edf5; --muted: #98a3b5; --line: #2b3545;
+    --case: #4a586d; --label: #ff4d5a; --label-ink: #1a0508; --sale: #4cc98a; --trade: #7ea2ff; --warn: #f0b04a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0f131a; --panel: #18202b; --ink: #e8edf5; --muted: #98a3b5; --line: #2b3545;
+  --case: #4a586d; --label: #ff4d5a; --label-ink: #1a0508; --sale: #4cc98a; --trade: #7ea2ff; --warn: #f0b04a;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--trade); outline-offset: 2px; }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+/* ---------- Header ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px;
+  padding-block: 14px; background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+.brand svg { flex: none; }
+.brand h1 { margin: 0; font: 900 26px/1 var(--display); font-stretch: 125%; letter-spacing: -0.01em; }
+.tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.tab { border: 0; background: none; padding: 7px 14px; border-radius: 999px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
+  padding: 9px 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+}
+.btn:hover { border-color: var(--case); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn.primary { background: var(--label); border-color: var(--label); color: var(--label-ink); }
+.btn.holo { background: var(--holo); border: 0; color: #161c26; }
+.btn.ghost { background: none; }
+.btn.danger { color: var(--label); }
+
+/* ---------- Notices ---------- */
+.notice { margin: 16px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+.notice b { color: var(--ink); }
+
+/* ---------- Browse ---------- */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0 14px; }
+.search-wrap { position: relative; flex: 1 1 220px; min-width: 0; display: flex; }
+.suggest {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 6; margin: 0; padding: 4px; list-style: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 28px rgb(10 14 20 / 0.18);
+  max-height: 320px; overflow-y: auto;
+}
+.suggest li { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 10px; padding: 7px 10px; border-radius: 7px; cursor: pointer; }
+.suggest li[aria-selected="true"] { background: var(--paper); }
+.suggest .s-text { overflow-wrap: anywhere; }
+.suggest .s-text mark { background: none; color: inherit; font-weight: 700; }
+.suggest .s-kind { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.suggest .s-count { grid-column: 2; grid-row: 1 / span 2; font: 600 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.search { flex: 1 1 auto; width: 100%; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+select.sel { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.count { color: var(--muted); font-size: 13px; margin: 0 0 12px; font-variant-numeric: tabular-nums; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 18px; }
+
+/* A listing, drawn as a graded slab: the label up top, the card in the window. */
+.slab {
+  display: flex; flex-direction: column; text-align: left; padding: 8px;
+  background: var(--panel); border: 2px solid var(--case); border-radius: 12px; cursor: pointer;
+  box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--case) 18%, transparent);
+  transition: transform 0.15s ease;
+}
+.slab:hover { transform: translateY(-2px); }
+.slab.sold { opacity: 0.6; }
+.slab-label {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: start;
+  padding: 7px 8px; border-radius: 6px; background: var(--paper); border-top: 4px solid var(--label);
+}
+.slab-title { font: 800 14px/1.2 var(--display); font-stretch: 112%; overflow-wrap: anywhere; }
+.slab-sub { grid-column: 1; font-size: 11.5px; color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
+.grade { grid-row: 1 / span 2; grid-column: 2; font: 700 12px/1 var(--mono); text-align: center; padding: 4px 6px; border: 1.5px solid var(--ink); border-radius: 4px; }
+.grade small { display: block; font-size: 9px; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 2px; }
+.window { margin-top: 8px; aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden; background: var(--paper); display: grid; place-items: center; }
+.window img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.window .nophoto { color: var(--muted); font-size: 12px; text-align: center; padding: 12px; }
+.slab-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.price { font: 700 17px/1 var(--mono); color: var(--label); font-variant-numeric: tabular-nums; }
+.mode { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; }
+.mode.sale { color: var(--sale); background: color-mix(in srgb, var(--sale) 14%, transparent); }
+.mode.trade { color: var(--trade); background: color-mix(in srgb, var(--trade) 14%, transparent); }
+.mode.sold { color: var(--muted); background: color-mix(in srgb, var(--muted) 16%, transparent); }
+.seller { font-size: 12px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
+
+.empty { text-align: center; padding: 48px 16px; border: 2px dashed var(--line); border-radius: 12px; color: var(--muted); }
+.empty h2 { margin: 0 0 6px; color: var(--ink); font: 800 22px/1.2 var(--display); font-stretch: 118%; text-wrap: balance; }
+.empty p { margin: 0 auto 16px; max-width: 46ch; }
+
+/* ---------- Price check ---------- */
+.check { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 22px; margin-top: 20px; align-items: start; }
+@media (max-width: 760px) { .check { grid-template-columns: 1fr; } }
+.check h2 { margin: 0 0 4px; font: 900 28px/1.1 var(--display); font-stretch: 122%; text-wrap: balance; }
+.check .lede { margin: 0 0 16px; color: var(--muted); max-width: 52ch; }
+.shot {
+  aspect-ratio: 5 / 7; max-width: 340px; border-radius: 14px; border: 2px dashed var(--case);
+  display: grid; place-items: center; overflow: hidden; background: var(--panel); text-align: center; color: var(--muted);
+}
+.shot img { width: 100%; height: 100%; object-fit: contain; background: #0b0d12; }
+.shot-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.version { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 520px; margin-top: 14px; }
+@media (max-width: 480px) { .version { grid-template-columns: 1fr; } }
+.version em { font-style: normal; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.version-tip { margin: 6px 0 0; font-size: 13px; color: var(--muted); max-width: 52ch; }
+.warning { font-size: 14px; border: 1px solid var(--warn); border-radius: 8px; padding: 10px 12px; margin: 12px 0; background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.warning b { color: var(--warn); }
+.hidden-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+.result { background: var(--panel); border: 2px solid var(--case); border-radius: 14px; padding: 14px; }
+.result .slab-label { padding: 10px 12px; }
+.result .slab-title { font-size: 20px; }
+.result .slab-sub { font-size: 13px; }
+.status { color: var(--muted); }
+.value-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin: 16px 0 6px; }
+.value-big { font: 700 34px/1 var(--mono); color: var(--label); font-variant-numeric: tabular-nums; }
+.value-cap { color: var(--muted); font-size: 13px; }
+.range { position: relative; height: 10px; border-radius: 999px; background: var(--holo); margin: 18px 4px 6px; }
+.range .tick { position: absolute; top: -5px; width: 4px; height: 20px; border-radius: 2px; background: var(--ink); transform: translateX(-50%); }
+.range-labels { display: flex; justify-content: space-between; font: 600 12px/1.2 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 16px 0; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.caveat { font-size: 13px; color: var(--muted); border-left: 3px solid var(--warn); padding-left: 10px; margin: 12px 0; }
+.result-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.query { font: 500 12px/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+
+/* ---------- Sheets ---------- */
+dialog.sheet {
+  width: min(640px, calc(100% - 24px)); max-height: calc(100% - 24px); padding: 0;
+  border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--ink);
+}
+dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+.sheet-head h2 { margin: 0; font: 900 20px/1.1 var(--display); font-stretch: 118%; }
+.sheet-body { padding: 16px 18px 20px; display: grid; gap: 14px; }
+.field { display: grid; gap: 5px; }
+.field > span { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.field input, .field select, .field textarea { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); width: 100%; min-width: 0; }
+.field textarea { min-height: 76px; resize: vertical; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumb { position: relative; width: 74px; aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--paper); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgb(0 0 0 / 0.65); color: #fff; font-size: 13px; line-height: 1; cursor: pointer; }
+.form-error { color: var(--label); font-weight: 600; min-height: 1.5em; margin: 0; }
+.sheet-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+.detail-photos { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.detail-main { aspect-ratio: 5 / 7; max-height: 60vh; margin: 0 auto; border-radius: 10px; overflow: hidden; background: var(--paper); }
+.detail-main img { width: 100%; height: 100%; object-fit: contain; }
+.detail-strip { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.detail-strip button { width: 46px; aspect-ratio: 5 / 7; padding: 0; border: 2px solid transparent; border-radius: 5px; overflow: hidden; cursor: pointer; background: var(--paper); }
+.detail-strip button[aria-current="true"] { border-color: var(--label); }
+.detail-strip img { width: 100%; height: 100%; object-fit: cover; }
+.who { display: flex; align-items: center; gap: 10px; }
+.who img { width: 32px; height: 32px; border-radius: 50%; }
+.contact { padding: 10px 12px; border-radius: 8px; background: var(--paper); overflow-wrap: anywhere; }
+
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
+
+@media (prefers-reduced-motion: reduce) { .slab { transition: none; } .slab:hover { transform: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="30" height="38" viewBox="0 0 30 38" aria-hidden="true">
+        <rect x="1.5" y="1.5" width="27" height="35" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect>
+        <rect x="5" y="6" width="20" height="26" rx="2" fill="#c8202c"></rect>
+        <rect x="8" y="9" width="14" height="9" rx="1" fill="#ffffff" opacity="0.85"></rect>
+      </svg>
+      <h1>Toploader</h1>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" id="tab-browse" aria-selected="true" data-view="browse">Browse</button>
+      <button class="tab" role="tab" id="tab-check" aria-selected="false" data-view="check">Price check</button>
+      <button class="tab" role="tab" id="tab-mine" aria-selected="false" data-view="mine">My cards</button>
+    </nav>
+    <button class="btn primary" id="new-listing">+ List a card</button>
+  </header>
+
+  <p class="notice" id="access-note" hidden></p>
+
+  <!-- Browse and My cards share the grid. -->
+  <section id="view-list">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input id="q" class="search" type="search" placeholder="Search cards, sets, players…" aria-label="Search listings"
+          role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="q-list" autocomplete="off">
+        <ul id="q-list" class="suggest" role="listbox" aria-label="Suggestions" hidden></ul>
+      </div>
+      <select id="sort" class="sel" aria-label="Sort">
+        <option value="new">Newest first</option>
+        <option value="low">Price: low to high</option>
+        <option value="high">Price: high to low</option>
+      </select>
+    </div>
+    <div class="toolbar" style="margin-top:0">
+      <div class="chips" id="cat-chips" aria-label="Card type"></div>
+      <div class="chips" id="mode-chips" aria-label="Sale or trade"></div>
+    </div>
+    <p class="count" id="count"></p>
+    <div id="grid" class="grid"></div>
+  </section>
+
+  <!-- Price check -->
+  <section id="view-check" hidden>
+    <div class="check">
+      <div>
+        <h2>What's this card worth?</h2>
+        <p class="lede">Snap the front of the card, flat and in good light. Claude reads it, works out the card and its condition, and estimates what it sells for.</p>
+        <div class="shot" id="check-shot"><span>No photo yet</span></div>
+        <div class="version">
+          <label class="field" for="check-version"><span>Which version is it?</span>
+            <select id="check-version">
+              <option value="">Not sure</option>
+              <option value="regular">Regular / base card</option>
+              <option value="foil">Foil, holo, or reverse holo</option>
+              <option value="parallel">Parallel, refractor, or colored Prizm</option>
+              <option value="numbered">Serial numbered (like /99)</option>
+              <option value="variation">Short print, variation, or special insert</option>
+              <option value="auto">Autograph or patch / relic</option>
+            </select>
+          </label>
+          <label class="field" for="check-extra"><span>Anything else on it? <em>optional</em></span>
+            <input id="check-extra" maxlength="60" placeholder="e.g. Purple Prizm, 23/99, 1st Edition">
+          </label>
+        </div>
+        <p class="version-tip">Foils, parallels, and numbered cards can sell for 10 to 25 times the regular card, and a photo often can't show the difference.</p>
+        <div class="shot-actions">
+          <label class="btn" for="check-camera">Take photo</label>
+          <label class="btn ghost" for="check-file">Choose photo</label>
+          <button class="btn holo" id="check-go" disabled>Check value</button>
+        </div>
+        <input class="hidden-input" id="check-camera" type="file" accept="image/*" capture="environment">
+        <input class="hidden-input" id="check-file" type="file" accept="image/jpeg,image/png,image/webp">
+      </div>
+      <div class="result" id="check-result">
+        <div class="slab-label">
+          <div class="slab-title">Charizard · Base Set</div>
+          <div class="slab-sub">Example result · 1999 · #4/102 · Holo Rare</div>
+          <div class="grade"><small>COND</small>LP</div>
+        </div>
+        <div class="value-row"><span class="value-big">$300</span><span class="value-cap">typical sale, ungraded</span></div>
+        <div class="range" aria-hidden="true"><span class="tick" style="left:35%"></span></div>
+        <div class="range-labels"><span>$180</span><span>$600</span></div>
+        <p class="caveat">This is what a result looks like. Take or choose a photo of a real card to check it.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- List a card -->
+<dialog class="sheet" id="sheet-new" aria-labelledby="new-title">
+  <form id="new-form" method="dialog">
+    <div class="sheet-head">
+      <h2 id="new-title">List a card</h2>
+      <button class="btn ghost" type="button" id="new-close" aria-label="Close">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="field">
+        <span>Photos (front and back)</span>
+        <div class="thumbs" id="new-thumbs"></div>
+        <div class="shot-actions" style="margin-top:4px">
+          <label class="btn" for="new-camera">Take photo</label>
+          <label class="btn ghost" for="new-file">Add from library</label>
+          <button class="btn holo" type="button" id="new-estimate" hidden>Estimate value</button>
+        </div>
+        <input class="hidden-input" id="new-camera" type="file" accept="image/*" capture="environment">
+        <input class="hidden-input" id="new-file" type="file" accept="image/*" multiple>
+        <p class="status" id="new-photo-note" hidden></p>
+      </div>
+      <label class="field"><span>Card name</span><input id="f-title" required maxlength="80" placeholder="e.g. Charizard, LeBron James Rookie"></label>
+      <div class="row2">
+        <label class="field"><span>Type</span>
+          <select id="f-category"></select>
+        </label>
+        <label class="field"><span>Set or series</span><input id="f-set" maxlength="60" placeholder="e.g. Base Set, 2003 Topps Chrome"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Year</span><input id="f-year" inputmode="numeric" maxlength="4" placeholder="1999"></label>
+        <label class="field"><span>Card number</span><input id="f-number" maxlength="20" placeholder="4/102"></label>
+      </div>
+      <label class="field"><span>Version or parallel</span><input id="f-version" maxlength="60" placeholder="Optional: Foil, Purple Prizm, 23/99, 1st Edition"></label>
+      <div class="row2">
+        <label class="field"><span>Condition</span>
+          <select id="f-condition">
+            <option value="NM">Near Mint</option>
+            <option value="M">Mint</option>
+            <option value="LP">Lightly Played</option>
+            <option value="MP">Moderately Played</option>
+            <option value="HP">Heavily Played</option>
+            <option value="DMG">Damaged</option>
+            <option value="GRADED">Graded (slabbed)</option>
+          </select>
+        </label>
+        <label class="field" id="grade-field" hidden><span>Grade</span><input id="f-grade" maxlength="16" placeholder="PSA 9"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>Selling or trading</span>
+          <select id="f-mode">
+            <option value="sale">For sale</option>
+            <option value="trade">For trade</option>
+            <option value="both">Sale or trade</option>
+          </select>
+        </label>
+        <label class="field" id="price-field"><span>Asking price (USD)</span><input id="f-price" inputmode="decimal" placeholder="25.00"></label>
+      </div>
+      <label class="field" id="wants-field" hidden><span>Looking for in trade</span><input id="f-wants" maxlength="120" placeholder="e.g. Umbreon VMAX, any Jordan rookie"></label>
+      <label class="field"><span>Notes</span><textarea id="f-notes" maxlength="500" placeholder="Centering, whitening, edition, anything a buyer should know."></textarea></label>
+      <label class="field"><span>How to reach you</span><input id="f-contact" required maxlength="120" placeholder="e.g. Instagram @handle, or find me at lunch"></label>
+      <p class="form-error" id="new-error" role="alert"></p>
+      <div class="sheet-foot">
+        <button class="btn ghost" type="button" id="new-cancel">Cancel</button>
+        <button class="btn primary" type="submit" id="new-save">Post listing</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- A listing's details -->
+<dialog class="sheet" id="sheet-detail" aria-labelledby="detail-title">
+  <div class="sheet-head">
+    <h2 id="detail-title">Listing</h2>
+    <button class="btn ghost" type="button" id="detail-close" aria-label="Close">✕</button>
+  </div>
+  <div class="sheet-body" id="detail-body"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const CATEGORIES = ["Pokémon", "Sports", "Magic", "Yu-Gi-Oh!", "One Piece", "Other"];
+  const COND = { M: "Mint", NM: "Near Mint", LP: "Lightly Played", MP: "Moderately Played", HP: "Heavily Played", DMG: "Damaged", GRADED: "Graded" };
+  const MAX_PHOTOS = 4;
+
+  // Small DOM builder: text always goes in as text, never as HTML.
+  function h(tag, attrs = {}, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+    return el;
+  }
+  const money = (n) => (n === null || n === undefined || !isFinite(n)) ? "" : "$" + (n >= 100 ? Math.round(n).toLocaleString("en-US") : Number(n).toFixed(2).replace(/\.00$/, ""));
+  const toast = (text) => {
+    const t = $("toast");
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => (t.hidden = true), 3200);
+  };
+
+  // ---------- State ----------
+  const state = {
+    view: "browse",
+    cat: "All",
+    mode: "all",
+    q: "",
+    sort: "new",
+    sellers: {}, // seller id -> their listings
+    me: null, // my id
+    loaded: false,
+    canPost: false,
+    isOwner: false,
+  };
+  let db = null, user = null, assets = null, sample = null;
+  let writing = Promise.resolve(); // one write at a time to my document
+
+  const allListings = () =>
+    Object.entries(state.sellers).flatMap(([seller, list]) => list.map((l) => ({ ...l, seller })));
+  const myListings = () => state.sellers[state.me] || [];
+
+  // ---------- Views ----------
+  function setView(view) {
+    state.view = view;
+    for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t.dataset.view === view));
+    $("view-list").hidden = view === "check";
+    $("view-check").hidden = view !== "check";
+    render();
+  }
+  for (const t of document.querySelectorAll(".tab")) t.addEventListener("click", () => setView(t.dataset.view));
+
+  function renderChips() {
+    $("cat-chips").replaceChildren(...["All", ...CATEGORIES].map((c) =>
+      h("button", { class: "chip", "aria-pressed": String(state.cat === c), onclick: () => { state.cat = c; render(); } }, c)));
+    const modes = [["all", "Sale or trade"], ["sale", "For sale"], ["trade", "For trade"]];
+    $("mode-chips").replaceChildren(...modes.map(([v, label]) =>
+      h("button", { class: "chip", "aria-pressed": String(state.mode === v), onclick: () => { state.mode = v; render(); } }, label)));
+  }
+
+  async function render() {
+    renderChips();
+    if (state.view === "check") return;
+    const mine = state.view === "mine";
+    let list = mine ? myListings().map((l) => ({ ...l, seller: state.me })) : allListings().filter((l) => !l.sold);
+    if (state.cat !== "All") list = list.filter((l) => l.category === state.cat);
+    if (state.mode !== "all") list = list.filter((l) => l.mode === state.mode || l.mode === "both");
+    const q = state.q.trim().toLowerCase();
+    if (q) list = list.filter((l) => [l.title, l.set, l.year, l.number, l.version, l.category, l.notes, l.wants].join(" ").toLowerCase().includes(q));
+    const priceOf = (l) => (typeof l.price === "number" ? l.price : null);
+    list.sort((a, b) => {
+      if (state.sort === "low" || state.sort === "high") {
+        const pa = priceOf(a), pb = priceOf(b);
+        if (pa === null) return 1;
+        if (pb === null) return -1;
+        return state.sort === "low" ? pa - pb : pb - pa;
+      }
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+
+    const grid = $("grid");
+    if (!state.loaded) {
+      $("count").textContent = "";
+      grid.replaceChildren(empty("Loading listings…", "Cards people have posted show up here."));
+      return;
+    }
+    $("count").textContent = list.length ? `${list.length} card${list.length === 1 ? "" : "s"}` : "";
+    if (!list.length) {
+      const nothingYet = mine ? !myListings().length : !allListings().length;
+      grid.replaceChildren(nothingYet
+        ? empty(mine ? "You haven't listed any cards" : "No cards listed yet",
+            mine ? "Snap a photo of a card you want to sell or trade, and it shows up here and in Browse." : "Be the first: list a card to sell or trade. Take a photo, set a price, and say how people can reach you.",
+            state.canPost ? h("button", { class: "btn primary", onclick: openNew }, "+ List a card") : null)
+        : empty("No cards match", "Try a different search, or clear the filters."));
+      return;
+    }
+    const names = user ? await user.profiles([...new Set(list.map((l) => l.seller))]) : {};
+    grid.replaceChildren(...list.map((l) => slab(l, names[l.seller])));
+  }
+
+  function empty(title, text, action = null) {
+    return h("div", { class: "empty", style: "grid-column: 1 / -1" }, h("h2", {}, title), h("p", {}, text), action);
+  }
+
+  function gradeBadge(l) {
+    return l.condition === "GRADED"
+      ? h("div", { class: "grade" }, h("small", {}, "GRADE"), l.grade || "Slab")
+      : h("div", { class: "grade" }, h("small", {}, "COND"), l.condition || "NM");
+  }
+  function subline(l) {
+    return [l.set, l.year, l.number && "#" + l.number].filter(Boolean).join(" · ") || l.category;
+  }
+  function modeTag(l) {
+    if (l.sold) return h("span", { class: "mode sold" }, "Sold");
+    if (l.mode === "trade") return h("span", { class: "mode trade" }, "Trade");
+    if (l.mode === "both") return h("span", { class: "mode sale" }, "Sale / trade");
+    return h("span", { class: "mode sale" }, "For sale");
+  }
+
+  function slab(l, who) {
+    const photo = l.photos?.[0];
+    return h("button", { class: "slab" + (l.sold ? " sold" : ""), onclick: () => openDetail(l), "aria-label": `${l.title}, ${l.price != null ? money(l.price) : "trade"}` },
+      h("div", { class: "slab-label" }, h("div", { class: "slab-title" }, l.title), h("div", { class: "slab-sub" }, subline(l)), gradeBadge(l)),
+      h("div", { class: "window" }, photo ? h("img", { src: "/_blob/" + photo, alt: "", loading: "lazy", onerror: (e) => e.target.replaceWith(h("span", { class: "nophoto" }, "Photo unavailable")) }) : h("span", { class: "nophoto" }, "No photo")),
+      h("div", { class: "slab-foot" }, h("span", { class: "price" }, l.price != null && l.mode !== "trade" ? money(l.price) : ""), modeTag(l)),
+      h("div", { class: "seller" }, who?.isMe ? "Your listing" : (who?.name || "A collector")));
+  }
+
+  // ---------- Search suggestions ----------
+  // As you type, suggest things that are actually listed: card names, sets,
+  // versions, years, grades, and card types, with how many listings match.
+  const q = $("q");
+  const qList = $("q-list");
+  let suggestions = [];
+  let active = -1;
+
+  function buildIndex() {
+    const pool = state.view === "mine" ? myListings() : allListings().filter((l) => !l.sold);
+    const terms = new Map(); // lowercased text -> {text, kind, count}
+    const addTerm = (text, kind) => {
+      text = String(text || "").trim();
+      if (text.length < 2) return;
+      const key = kind + "|" + text.toLowerCase();
+      const t = terms.get(key) || { text, kind, count: 0 };
+      t.count++;
+      terms.set(key, t);
+    };
+    for (const l of pool) {
+      addTerm(l.title, "Card");
+      addTerm(l.set, "Set");
+      addTerm(l.version, "Version");
+      addTerm(l.year && l.set ? `${l.year} ${l.set}` : "", "Set");
+      addTerm(l.category, "Type");
+      addTerm(l.condition === "GRADED" ? l.grade : "", "Grade");
+    }
+    return [...terms.values()];
+  }
+
+  function suggest() {
+    const text = q.value.trim().toLowerCase();
+    if (!text) return closeSuggest();
+    const words = text.split(/\s+/);
+    const scored = [];
+    for (const t of buildIndex()) {
+      const lower = t.text.toLowerCase();
+      if (!words.every((w) => lower.includes(w))) continue;
+      if (lower === text) continue; // already typed in full
+      // Starts-with beats a word that starts with it, beats anywhere inside.
+      const rank = lower.startsWith(text) ? 0 : lower.split(/[\s\-/]+/).some((w) => w.startsWith(words[0])) ? 1 : 2;
+      scored.push({ ...t, rank });
+    }
+    scored.sort((a, b) => a.rank - b.rank || b.count - a.count || a.text.localeCompare(b.text));
+    suggestions = scored.slice(0, 8);
+    active = -1;
+    if (!suggestions.length) return closeSuggest();
+    qList.replaceChildren(...suggestions.map((sug, i) => {
+      const li = h("li", { id: `q-opt-${i}`, role: "option", "aria-selected": "false",
+        onmousedown: (e) => { e.preventDefault(); pick(i); } },
+        h("span", { class: "s-text" }, highlight(sug.text, words[0])),
+        h("span", { class: "s-kind" }, sug.kind),
+        h("span", { class: "s-count" }, String(sug.count)));
+      li.setAttribute("aria-label", `${sug.text}, ${sug.kind}, ${sug.count} listing${sug.count === 1 ? "" : "s"}`);
+      return li;
+    }));
+    qList.hidden = false;
+    q.setAttribute("aria-expanded", "true");
+    q.removeAttribute("aria-activedescendant");
+  }
+
+  // Bold the part that matches what was typed.
+  function highlight(text, word) {
+    const i = text.toLowerCase().indexOf(word);
+    if (i < 0 || !word) return text;
+    const frag = document.createDocumentFragment();
+    frag.append(text.slice(0, i), h("mark", {}, text.slice(i, i + word.length)), text.slice(i + word.length));
+    return frag;
+  }
+
+  function setActive(i) {
+    active = i;
+    [...qList.children].forEach((li, n) => li.setAttribute("aria-selected", String(n === i)));
+    if (i >= 0) {
+      q.setAttribute("aria-activedescendant", `q-opt-${i}`);
+      qList.children[i].scrollIntoView({ block: "nearest" });
+    } else q.removeAttribute("aria-activedescendant");
+  }
+
+  function pick(i) {
+    const sug = suggestions[i];
+    if (!sug) return;
+    if (sug.kind === "Type" && CATEGORIES.includes(sug.text)) {
+      // A card type is a filter, not search text.
+      state.cat = sug.text;
+      q.value = "";
+    } else q.value = sug.text;
+    state.q = q.value;
+    closeSuggest();
+    render();
+  }
+
+  function closeSuggest() {
+    qList.hidden = true;
+    qList.replaceChildren();
+    suggestions = [];
+    active = -1;
+    q.setAttribute("aria-expanded", "false");
+    q.removeAttribute("aria-activedescendant");
+  }
+
+  q.addEventListener("input", () => { state.q = q.value; render(); suggest(); });
+  q.addEventListener("focus", () => q.value.trim() && suggest());
+  q.addEventListener("blur", () => setTimeout(closeSuggest, 120));
+  q.addEventListener("keydown", (e) => {
+    if (qList.hidden) {
+      if (e.key === "ArrowDown" && q.value.trim()) { suggest(); e.preventDefault(); }
+      return;
+    }
+    if (e.key === "ArrowDown") { setActive((active + 1) % suggestions.length); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { setActive(active <= 0 ? suggestions.length - 1 : active - 1); e.preventDefault(); }
+    else if (e.key === "Enter" && active >= 0) { pick(active); e.preventDefault(); }
+    else if (e.key === "Escape") { closeSuggest(); e.preventDefault(); }
+  });
+  $("sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+
+  // ---------- Details ----------
+  async function openDetail(l) {
+    const names = user ? await user.profiles([l.seller]) : {};
+    const who = names[l.seller];
+    const mine = l.seller === state.me;
+    const body = $("detail-body");
+    $("detail-title").textContent = l.title;
+    const photos = l.photos || [];
+    let current = 0;
+    const main = h("div", { class: "detail-main" });
+    const strip = h("div", { class: "detail-strip" });
+    const show = (i) => {
+      current = i;
+      main.replaceChildren(photos.length ? h("img", { src: "/_blob/" + photos[i], alt: `Photo ${i + 1} of ${l.title}` }) : h("div", { class: "window" }, h("span", { class: "nophoto" }, "No photo")));
+      for (const [n, b] of [...strip.children].entries()) b.setAttribute("aria-current", String(n === i));
+    };
+    photos.forEach((id, i) => strip.append(h("button", { type: "button", "aria-label": `Photo ${i + 1}`, onclick: () => show(i) }, h("img", { src: "/_blob/" + id, alt: "" }))));
+    show(0);
+
+    const facts = h("dl", { class: "facts" });
+    const add = (k, v) => v && facts.append(h("dt", {}, k), h("dd", {}, v));
+    add("Type", l.category);
+    add("Set", l.set);
+    add("Year", l.year);
+    add("Number", l.number && "#" + l.number);
+    add("Version", l.version);
+    add("Condition", l.condition === "GRADED" ? `Graded ${l.grade || ""}`.trim() : COND[l.condition]);
+    add("Price", l.price != null && l.mode !== "trade" ? money(l.price) : null);
+    add("Wants", l.wants);
+    add("AI estimate", l.estimate ? `${money(l.estimate.low)} – ${money(l.estimate.high)}` : null);
+
+    const actions = h("div", { class: "sheet-foot" });
+    if (mine) {
+      actions.append(
+        h("button", { class: "btn", onclick: () => updateMine(l.id, { sold: !l.sold }).then(() => { $("sheet-detail").close(); toast(l.sold ? "Marked available" : "Marked sold"); }) }, l.sold ? "Mark available" : "Mark sold"),
+        h("button", { class: "btn danger", onclick: () => confirmDelete(l, actions) }, "Delete"));
+    } else if (state.isOwner) {
+      actions.append(h("button", { class: "btn danger", onclick: () => removeOthers(l).then(() => $("sheet-detail").close()) }, "Remove listing"));
+    }
+
+    body.replaceChildren(
+      h("div", { class: "detail-photos" }, main, photos.length > 1 ? strip : null),
+      h("div", { class: "slab-label" }, h("div", { class: "slab-title" }, l.title), h("div", { class: "slab-sub" }, subline(l)), gradeBadge(l)),
+      h("div", { style: "display:flex;justify-content:space-between;align-items:center;gap:8px" },
+        h("span", { class: "price", style: "font-size:24px" }, l.price != null && l.mode !== "trade" ? money(l.price) : ""), modeTag(l)),
+      facts,
+      l.notes ? h("p", { style: "margin:0;white-space:pre-wrap" }, l.notes) : null,
+      h("div", { class: "who" }, who ? h("img", { src: who.avatarUrl, alt: "" }) : null, h("span", {}, who?.isMe ? "You" : (who?.name || "A collector"))),
+      h("div", { class: "contact" }, h("b", {}, "Contact: "), l.contact || "No contact given"),
+      actions);
+    $("sheet-detail").showModal();
+  }
+  $("detail-close").addEventListener("click", () => $("sheet-detail").close());
+
+  function confirmDelete(l, actions) {
+    actions.replaceChildren(
+      h("span", { class: "status", style: "margin-right:auto" }, "Delete this listing and its photos?"),
+      h("button", { class: "btn", onclick: () => $("sheet-detail").close() }, "Keep it"),
+      h("button", { class: "btn primary", onclick: async () => {
+        await saveMine(myListings().filter((x) => x.id !== l.id));
+        for (const id of l.photos || []) assets?.delete(id).catch(() => {});
+        $("sheet-detail").close();
+        toast("Listing deleted");
+      } }, "Delete"));
+  }
+
+  // ---------- Writing my listings ----------
+  function saveMine(listings) {
+    const run = writing.then(async () => {
+      await db.doc("sellers/" + state.me).set({ listings, updatedAt: Date.now() });
+    });
+    writing = run.catch(() => {});
+    return run.catch((e) => {
+      toast(e?.code === "quota_exceeded" ? "The listing board is full. Delete an old listing first." : "Couldn't save. Check your connection and try again.");
+      throw e;
+    });
+  }
+  const updateMine = (id, changes) => saveMine(myListings().map((l) => (l.id === id ? { ...l, ...changes } : l)));
+  // The artifact's owner can take down anyone's listing.
+  async function removeOthers(l) {
+    const rest = (state.sellers[l.seller] || []).filter((x) => x.id !== l.id).map(({ seller, ...x }) => x);
+    try {
+      await db.doc("sellers/" + l.seller).set({ listings: rest, updatedAt: Date.now() });
+      toast("Listing removed");
+    } catch {
+      toast("Couldn't remove that listing.");
+    }
+  }
+
+  // ---------- Photos ----------
+  // Shrink to at most 1400px on the long side as JPEG, so uploads are quick.
+  function shrink(file, max = 1400) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * scale);
+        c.height = Math.round(img.naturalHeight * scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob((b) => resolve(b || file), "image/jpeg", 0.86);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
+  // ---------- List a card ----------
+  let draft = { photos: [], estimate: null }; // photos: [{blob, url}]
+
+  function openNew(prefill = null) {
+    if (!state.canPost) return toast("You can browse, but posting isn't available on your account here.");
+    $("new-form").reset();
+    draft = { photos: [], estimate: null };
+    $("new-error").textContent = "";
+    if (prefill && prefill.title) {
+      $("f-title").value = prefill.title || "";
+      $("f-set").value = prefill.set || "";
+      $("f-year").value = prefill.year || "";
+      $("f-number").value = prefill.number || "";
+      $("f-version").value = prefill.version || "";
+      if (CATEGORIES.includes(prefill.category)) $("f-category").value = prefill.category;
+      if (prefill.condition && COND[prefill.condition]) $("f-condition").value = prefill.condition;
+      if (prefill.grade) $("f-grade").value = prefill.grade;
+      if (prefill.estimate?.typical) $("f-price").value = String(Math.round(prefill.estimate.typical));
+      draft.estimate = prefill.estimate || null;
+      if (prefill.photo) addDraftPhotos([prefill.photo]);
+    }
+    syncForm();
+    renderThumbs();
+    $("sheet-new").showModal();
+  }
+  $("new-listing").addEventListener("click", () => openNew());
+  $("new-close").addEventListener("click", () => $("sheet-new").close());
+  $("new-cancel").addEventListener("click", () => $("sheet-new").close());
+
+  $("f-category").replaceChildren(...CATEGORIES.map((c) => h("option", { value: c }, c)));
+  function syncForm() {
+    $("grade-field").hidden = $("f-condition").value !== "GRADED";
+    const mode = $("f-mode").value;
+    $("price-field").hidden = mode === "trade";
+    $("wants-field").hidden = mode === "sale";
+  }
+  $("f-condition").addEventListener("change", syncForm);
+  $("f-mode").addEventListener("change", syncForm);
+
+  async function addDraftPhotos(files) {
+    for (const file of files) {
+      if (draft.photos.length >= MAX_PHOTOS) { toast(`Up to ${MAX_PHOTOS} photos per listing`); break; }
+      if (!file.type.startsWith("image/")) continue;
+      const blob = await shrink(file);
+      draft.photos.push({ blob, url: URL.createObjectURL(blob), file });
+    }
+    renderThumbs();
+  }
+  function renderThumbs() {
+    $("new-thumbs").replaceChildren(...draft.photos.map((p, i) =>
+      h("div", { class: "thumb" }, h("img", { src: p.url, alt: `Photo ${i + 1}` }),
+        h("button", { type: "button", "aria-label": `Remove photo ${i + 1}`, onclick: () => { draft.photos.splice(i, 1); renderThumbs(); } }, "✕"))));
+    $("new-estimate").hidden = !sample || !draft.photos.length;
+  }
+  for (const id of ["new-camera", "new-file"]) $(id).addEventListener("change", (e) => { addDraftPhotos([...e.target.files]); e.target.value = ""; });
+
+  $("new-estimate").addEventListener("click", async () => {
+    const btn = $("new-estimate");
+    btn.disabled = true;
+    btn.textContent = "Estimating…";
+    try {
+      const r = await identify(draft.photos[0].blob, "", $("f-version").value.trim());
+      if (!r.identified) { toast("Couldn't recognize the card. Fill in the details yourself."); return; }
+      if (!$("f-title").value) $("f-title").value = r.name || "";
+      if (!$("f-set").value) $("f-set").value = r.set || "";
+      if (!$("f-year").value) $("f-year").value = r.year || "";
+      if (!$("f-number").value) $("f-number").value = r.number || "";
+      if (CATEGORIES.includes(r.category)) $("f-category").value = r.category;
+      if (!$("f-price").value && r.value_typical) $("f-price").value = String(Math.round(r.value_typical));
+      draft.estimate = { low: r.value_low, typical: r.value_typical, high: r.value_high };
+      toast(`Estimated ${money(r.value_low)} – ${money(r.value_high)}`);
+    } catch (e) {
+      toast(sampleError(e));
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Estimate value";
+    }
+  });
+
+  $("new-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const err = $("new-error");
+    const title = $("f-title").value.trim();
+    const contact = $("f-contact").value.trim();
+    const mode = $("f-mode").value;
+    const priceText = $("f-price").value.replace(/[$,\s]/g, "");
+    const price = mode === "trade" || priceText === "" ? null : Number(priceText);
+    if (!title) return (err.textContent = "Add the card's name.");
+    if (!contact) return (err.textContent = "Say how buyers can reach you.");
+    if (price !== null && (!isFinite(price) || price < 0)) return (err.textContent = "Enter the price as a number, like 25 or 12.50.");
+    const save = $("new-save");
+    save.disabled = true;
+    err.textContent = "";
+    try {
+      const ids = [];
+      if (draft.photos.length) {
+        if (!assets) throw { friendly: "Photos can't be uploaded from your account. Remove them to post without photos." };
+        for (const [i, p] of draft.photos.entries()) {
+          save.textContent = `Uploading photo ${i + 1} of ${draft.photos.length}…`;
+          const up = await assets.upload(p.blob, { type: "image/jpeg" });
+          ids.push(up.id);
+        }
+      }
+      save.textContent = "Posting…";
+      const listing = {
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+        title,
+        category: $("f-category").value,
+        set: $("f-set").value.trim(),
+        year: $("f-year").value.trim(),
+        number: $("f-number").value.trim(),
+        version: $("f-version").value.trim(),
+        condition: $("f-condition").value,
+        grade: $("f-condition").value === "GRADED" ? $("f-grade").value.trim() : "",
+        mode,
+        price,
+        wants: mode === "sale" ? "" : $("f-wants").value.trim(),
+        notes: $("f-notes").value.trim(),
+        contact,
+        photos: ids,
+        estimate: draft.estimate,
+        sold: false,
+        createdAt: Date.now(),
+      };
+      await saveMine([listing, ...myListings()]);
+      $("sheet-new").close();
+      toast("Listing posted");
+      setView("mine");
+    } catch (e2) {
+      err.textContent = e2?.friendly || (e2?.code === "too_large" ? "One photo is too big. Try another." : e2?.code === "quota_or_state" ? "Photo storage is full right now." : "Couldn't post. Check your connection and try again.");
+    } finally {
+      save.disabled = false;
+      save.textContent = "Post listing";
+    }
+  });
+
+  // ---------- Price check (Claude) ----------
+  let checkPhoto = null; // {blob, url}
+  let lastResult = null;
+
+  async function setCheckPhoto(file) {
+    if (!file) return;
+    const blob = await shrink(file, 1600);
+    checkPhoto = { blob, url: URL.createObjectURL(blob) };
+    $("check-shot").replaceChildren(h("img", { src: checkPhoto.url, alt: "The card to check" }));
+    $("check-go").disabled = !sample;
+  }
+  for (const id of ["check-camera", "check-file"]) $(id).addEventListener("change", (e) => { setCheckPhoto(e.target.files[0]); e.target.value = ""; });
+
+  const VERSION_TEXT = {
+    regular: "the regular base version (not foil, parallel, or numbered)",
+    foil: "a foil / holo / reverse holo version",
+    parallel: "a parallel, refractor, or colored Prizm version",
+    numbered: "a serial-numbered version",
+    variation: "a short print, image variation, or special insert",
+    auto: "an autograph or patch / relic card",
+  };
+  const PROMPT = `You are a trading card price expert. The image is a photo of one trading card (it could be Pokémon, sports, Magic: The Gathering, Yu-Gi-Oh!, One Piece, or anything else).
+1. Identify it as exactly as you can: name or player, set or product, year, card number, and anything that changes value (1st edition, holo, refractor, parallel, rookie card, autograph, serial number).
+2. Judge its condition from the photo (M, NM, LP, MP, HP, DMG), or read the grading company and grade if it's in a slab.
+3. Estimate what this exact card in this condition sells for in US dollars, based on recent completed sales you know of: a low, a typical, and a high price.
+Reply with only JSON in this shape:
+{"identified": true, "category": "Pokémon" | "Sports" | "Magic" | "Yu-Gi-Oh!" | "One Piece" | "Other", "name": "...", "set": "...", "year": "...", "number": "...", "variant": "...", "condition": "NM", "grade": "" , "value_low": 0, "value_typical": 0, "value_high": 0, "confidence": "high" | "medium" | "low", "notes": "one or two short sentences on what drives the price", "search_query": "words to search sold listings for this card"}
+Use "" for anything you can't tell. If the photo isn't a trading card or is too unclear, reply {"identified": false, "notes": "what's wrong and how to retake the photo"}.
+Price calibration: estimates like this have tested too LOW, often 2 to 5 times, for vintage cards (before about 2018), rookie cards, and special versions (foils, parallels, refractors, numbered cards, variations, inserts). Price those from what they really sell for, not what a regular copy sells for, and don't lowball.
+Also include "special": true in the JSON for any vintage, rookie, or special-version card, else "special": false.`;
+
+  // `version` and `extra`: what the person told us about the version.
+  async function identify(blob, version = "", extra = "") {
+    let told = "";
+    if (version && VERSION_TEXT[version]) told += `\nThe owner says this is ${VERSION_TEXT[version]}.`;
+    if (extra) told += `\nThe owner adds: "${extra.replace(/["\n]/g, " ").slice(0, 60)}".`;
+    if (told) told += " Trust this over what the photo seems to show, and price that exact version.";
+    const r = await sample.json(PROMPT + told, { images: [blob] });
+    if (!r || typeof r !== "object") throw { code: "invalid_json" };
+    for (const k of ["value_low", "value_typical", "value_high"]) r[k] = Number(r[k]) || 0;
+    return r;
+  }
+
+  function sampleError(e) {
+    switch (e?.code) {
+      case "not_granted": return "Price check needs permission to use Claude. Allow it when asked.";
+      case "rate_limited": return "Too many checks at once. Wait a minute and try again.";
+      case "image_rejected": return "That photo couldn't be read. Try a JPEG or PNG under 20 MB.";
+      case "invalid_json": return "The answer came back garbled. Try the check again.";
+      case "refused": return "Claude couldn't help with that photo. Try a clearer photo of just the card.";
+      case "sampling_disabled": case "images_unavailable": return "Price check isn't available on your account.";
+      default: return "The check didn't finish. Try again.";
+    }
+  }
+
+  $("check-go").addEventListener("click", async () => {
+    if (!checkPhoto || !sample) return;
+    const go = $("check-go");
+    go.disabled = true;
+    go.textContent = "Checking…";
+    $("check-result").replaceChildren(h("p", { class: "status" }, "Reading the card… this can take up to a minute."));
+    try {
+      const version = $("check-version").value;
+      const r = await identify(checkPhoto.blob, version, $("check-extra").value.trim());
+      r.toldVersion = version;
+      lastResult = r;
+      showResult(r);
+    } catch (e) {
+      $("check-result").replaceChildren(h("p", { class: "form-error" }, sampleError(e)));
+    } finally {
+      go.disabled = false;
+      go.textContent = "Check value";
+    }
+  });
+
+  // In our tests, estimates for older cards, rookies, and special versions
+  // came out 2 to 5 times too low, so those get a clear warning.
+  function riskWarning(r) {
+    const year = parseInt(String(r.year || "").slice(0, 4), 10);
+    const reasons = [];
+    if (year && year < 2018) reasons.push("older card");
+    if (/rookie|\bRC\b/i.test([r.name, r.variant, r.notes].join(" "))) reasons.push("rookie card");
+    if (r.special === true || (r.toldVersion && r.toldVersion !== "regular")) reasons.push("special version");
+    if (!reasons.length) return null;
+    return h("p", { class: "warning" }, h("b", {}, "Likely worth more. "),
+      `This looks like a ${reasons.join(", ")}. Estimates for cards like this have tested 2 to 5 times too low. Check eBay sold listings before you sell.`);
+  }
+
+  function showResult(r) {
+    const box = $("check-result");
+    if (!r.identified) {
+      box.replaceChildren(h("p", { class: "form-error" }, "Couldn't recognize the card."), h("p", {}, r.notes || "Retake the photo: card flat, front side, good light, no glare."));
+      return;
+    }
+    const lo = r.value_low, mid = r.value_typical, hi = r.value_high;
+    const span = Math.max(1, hi - lo);
+    const pos = Math.min(100, Math.max(0, ((mid - lo) / span) * 100));
+    const query = (r.search_query || [r.name, r.set, r.number].filter(Boolean).join(" ")).trim();
+    const ebay = "https://www.ebay.com/sch/i.html?LH_Sold=1&LH_Complete=1&_nkw=" + encodeURIComponent(query);
+    const facts = h("dl", { class: "facts" });
+    const add = (k, v) => v && facts.append(h("dt", {}, k), h("dd", {}, v));
+    add("Type", r.category);
+    add("Variant", r.variant);
+    add("Condition", r.grade ? `Graded ${r.grade}` : COND[r.condition] || r.condition);
+    add("Confidence", { high: "High", medium: "Medium", low: "Low: double-check this one" }[r.confidence] || r.confidence);
+    box.replaceChildren(
+      h("div", { class: "slab-label" },
+        h("div", { class: "slab-title" }, r.name || "Unknown card"),
+        h("div", { class: "slab-sub" }, [r.set, r.year, r.number && "#" + r.number].filter(Boolean).join(" · ")),
+        r.grade ? h("div", { class: "grade" }, h("small", {}, "GRADE"), r.grade) : h("div", { class: "grade" }, h("small", {}, "COND"), r.condition || "?")),
+      h("div", { class: "value-row" }, h("span", { class: "value-big" }, money(mid)), h("span", { class: "value-cap" }, "typical sale in this condition")),
+      h("div", { class: "range", "aria-hidden": "true" }, h("span", { class: "tick", style: `left:${pos}%` })),
+      h("div", { class: "range-labels" }, h("span", {}, money(lo)), h("span", {}, money(hi))),
+      facts,
+      r.notes ? h("p", { style: "margin:0" }, r.notes) : null,
+      riskWarning(r),
+      !r.toldVersion ? h("p", { class: "caveat" }, "Tip: pick the card's version above and check again. Foils and parallels are easy to miss in a photo.") : null,
+      h("p", { class: "caveat" }, "This is Claude's estimate from recent sales it knows about, not a live price. Check sold listings before you buy or sell."),
+      h("div", { class: "result-actions" },
+        h("a", { class: "btn", href: ebay, target: "_blank", rel: "noopener" }, "eBay sold listings ↗"),
+        state.canPost ? h("button", { class: "btn primary", onclick: () => openNew({
+          title: r.name, set: r.set, year: r.year, number: r.number, category: r.category,
+          version: [r.variant, $("check-extra").value.trim()].filter(Boolean).join(", "),
+          condition: r.grade ? "GRADED" : r.condition, grade: r.grade,
+          estimate: { low: lo, typical: mid, high: hi }, photo: checkPhoto.blob,
+        }) }, "List this card") : null),
+      h("p", { class: "query" }, "Search: " + query));
+  }
+
+  // ---------- Start up ----------
+  async function start() {
+    [db, user, assets, sample] = await Promise.all(["db", "user", "assets", "sample"].map((n) => window.claude?.use?.(n) ?? null));
+    if (sample) {
+      const caps = await sample.limits().catch(() => null);
+      if (!caps?.images) sample = null;
+    }
+    if (!sample) {
+      $("check-go").disabled = true;
+      $("check-result").replaceChildren(h("p", { class: "status" }, "Price check needs Claude, which isn't available here. Open this page signed in to Claude to use it."));
+    }
+    const note = $("access-note");
+    if (!db) {
+      state.loaded = true;
+      note.hidden = false;
+      note.replaceChildren(h("b", {}, "Sign in to Claude "), "to see listings and post your own.");
+      $("new-listing").hidden = true;
+      render();
+      return;
+    }
+    state.me = user ? await user.id() : null;
+    state.isOwner = user ? await user.isOwner() : false;
+    const canWrite = user ? await user.can("data.write") : null;
+    state.canPost = Boolean(state.me) && canWrite !== false;
+    $("new-listing").hidden = !state.canPost;
+    if (!state.canPost) {
+      note.hidden = false;
+      note.replaceChildren(h("b", {}, "You can browse. "), "Posting your own cards needs Contributor access to this page; ask the person who shared it.");
+    } else if (!assets) {
+      note.hidden = false;
+      note.replaceChildren(h("b", {}, "Photo uploads aren't available on your account here, "), "so your listings will post without photos.");
+    }
+    db.collection("sellers").onSnapshot((snap) => {
+      const sellers = {};
+      for (const d of snap.docs) {
+        const list = d.data()?.listings;
+        if (Array.isArray(list)) sellers[d.id] = list;
+      }
+      state.sellers = sellers;
+      state.loaded = true;
+      render();
+    }, () => {
+      state.loaded = true;
+      note.hidden = false;
+      note.replaceChildren(h("b", {}, "Listings stopped updating. "), "Reload the page to reconnect.");
+      render();
+    });
+  }
+
+  render();
+  start();
+})();
+</script>
