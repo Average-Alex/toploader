@@ -1,35 +1,62 @@
 <!doctype html>
+<!-- This is the whole website in one file. It has three parts: the look (CSS, in <style>), the page itself (HTML, in <body>), and what it does (JavaScript, in <script> near the bottom). -->
 <html lang="en">
+<!-- The <head> holds settings and files the page needs. Nothing in it shows up on the page itself. -->
 <head>
+<!-- Use UTF-8 text, so letters like the é in Pokémon and emoji show up correctly. -->
 <meta charset="utf-8">
+<!-- Fit the page to the phone's screen instead of shrinking a desktop-sized page down. -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- The name shown in the browser tab. -->
 <title>Toploader</title>
+<!-- A short summary search engines and link previews can show. -->
 <meta name="description" content="Buy, sell, and trade trading cards with friends: Pokémon, sports, Magic, Yu-Gi-Oh!, and more.">
+<!-- Start connecting to Google Fonts early, so the fonts arrive faster. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Load the three fonts: Archivo (big titles), Public Sans (normal text), JetBrains Mono (prices and numbers). -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112..125,600..900&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<!-- Everything between <style> and </style> is CSS: it controls how things look (colors, sizes, spacing). It doesn't change what the site does. -->
 <style>
 /* Layout: a card-shop counter. One toolbar, then a binder grid of listings
    shown as graded "slabs" (label on top, card below). Sheets slide up for
    signing in, listing a card, and a listing's details. */
+/* Variables (names that start with --) used all over the page, so a color only has to be changed in one place. :root means the whole page. */
 :root {
+  /* Tell the browser this is a light page, so built-in parts like scrollbars and dropdowns are light too. */
   color-scheme: light;
+  /* The page's background (a light blue-grey, like a binder page). */
   --paper: #eceff4;
+  /* Background of boxes, buttons, and pop-ups. */
   --panel: #ffffff;
+  /* Main text color (almost black). */
   --ink: #161c26;
+  /* Softer grey for less important text. */
   --muted: #5b6577;
+  /* Thin border lines. */
   --line: #cdd4df;
+  /* The edge of the clear plastic case around each card. */
   --case: #9aa6b8;
+  /* The red of a grading label, used for prices and the main buttons. */
   --label: #c8202c;
+  /* Text color on top of the red. */
   --label-ink: #ffffff;
+  /* Green for "For sale" tags. */
   --sale: #1f7a4d;
+  /* Blue for "Trade" tags and links. */
   --trade: #2d5bd1;
+  /* Orange-brown for warnings and tips. */
   --warn: #9a5b00;
+  /* A rainbow, like a holographic card, for the eBay button. */
   --holo: linear-gradient(115deg, #7fe7ff, #c79bff 30%, #ffb1d6 50%, #ffe58a 70%, #8cffc8);
+  /* Font lists: if the first font can't load, the browser tries the next one. --display is for big titles... */
   --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  /* ...--body for normal text... */
   --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* ...and --mono for prices and numbers (every digit is the same width, so they line up). */
   --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
+/* If the phone or computer is set to dark mode, swap in dark colors. Only the variables change; everything else uses them automatically. */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
@@ -38,160 +65,272 @@
   }
 }
 
+/* * means every element. border-box makes widths include padding and borders, which makes sizes much easier to predict. */
 * { box-sizing: border-box; }
+/* Make the page at least as tall as the screen. */
 html, body { min-height: 100%; }
+/* The page as a whole: no default margin, our background and text colors, and our font. var(--paper) means "use the --paper color from above". */
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font: 15px/1.5 var(--body);
+  /* Keep at least 16px of space at the sides, and more on phones with rounded corners or notches (env(safe-area-inset-...)). */
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
+  /* No space above, 48px below so the last row of cards isn't jammed against the bottom. */
   padding-block: 0 48px;
 }
+/* Form controls normally use the browser's own font; this makes them use ours. */
 button, input, select, textarea { font: inherit; color: inherit; }
+/* A clear blue outline around whatever you've selected with the keyboard (Tab key), so keyboard users can see where they are. */
 :focus-visible { outline: 3px solid var(--trade); outline-offset: 2px; }
+/* Keep the content from getting too wide on big screens, and center it (margin: 0 auto). */
 .wrap { max-width: 1120px; margin: 0 auto; }
 
 /* ---------- Header ---------- */
+/* The header bar at the top. sticky keeps it on screen while you scroll. flex lines its parts up in a row, and flex-wrap lets them drop to a second row on narrow phones. */
 .top {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px;
   padding-block: 14px; background: var(--paper); border-bottom: 1px solid var(--line);
 }
+/* The logo and the name "Toploader". margin-right: auto pushes everything after it to the right. */
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+/* Don't let the logo get squished. */
 .brand svg { flex: none; }
+/* The "Toploader" title: extra bold (900), 26px, and stretched wider (font-stretch). */
 .brand h1 { margin: 0; font: 900 26px/1 var(--display); font-stretch: 125%; letter-spacing: -0.01em; }
+/* The pill-shaped box holding the Browse / Value lookup / My cards tabs. */
 .tabs { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+/* One tab button, plain until it's selected. */
 .tab { border: 0; background: none; padding: 7px 14px; border-radius: 999px; font-weight: 600; color: var(--muted); cursor: pointer; }
+/* The selected tab: dark background, light text. aria-selected is set by the JavaScript when you click a tab. */
 .tab[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+/* The "Sign in" button, or your name and "Sign out" when you're signed in. */
 .account { display: flex; align-items: center; gap: 8px; }
+/* Your name. If it's long, it gets cut off with "..." (text-overflow: ellipsis) instead of breaking the header. */
 .account .me { font-size: 13px; color: var(--muted); max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The basic look shared by every button. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   border: 1px solid var(--line); background: var(--panel); border-radius: 8px;
   padding: 9px 14px; font-weight: 600; cursor: pointer; text-decoration: none; color: var(--ink);
 }
+/* :hover = while the mouse is over it. The border darkens a little. */
 .btn:hover { border-color: var(--case); }
+/* A button that can't be pressed right now (for example, while a card is posting) looks faded. */
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+/* The main action on a screen (like "+ List a card") is red. */
 .btn.primary { background: var(--label); border-color: var(--label); color: var(--label-ink); }
+/* The rainbow button. */
 .btn.holo { background: var(--holo); border: 0; color: #161c26; }
+/* A quieter button with no background. */
 .btn.ghost { background: none; }
+/* Red text for dangerous actions like Delete. */
 .btn.danger { color: var(--label); }
+/* A smaller button. */
 .btn.small { padding: 6px 10px; font-size: 13px; }
 
+/* The message bar under the header, for things like "Couldn't load listings". */
 .notice { margin: 16px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); font-size: 14px; }
 .notice b { color: var(--ink); }
 
 /* ---------- Browse ---------- */
+/* A row of controls (the search box and sort menu, and the filter chips). */
 .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 18px 0 14px; }
+/* Holds the search box and its suggestion list. position: relative lets the list be placed right under the box. */
 .search-wrap { position: relative; flex: 1 1 220px; min-width: 0; display: flex; }
+/* The search box itself. */
 .search { flex: 1 1 auto; width: 100%; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+/* The dropdown of suggestions under the search box. position: absolute places it directly under the box, on top of the cards. */
 .suggest {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 6; margin: 0; padding: 4px; list-style: none;
   background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 28px rgb(10 14 20 / 0.18);
   max-height: 320px; overflow-y: auto;
 }
+/* One suggestion row: the text and its kind on the left, the count on the right (a 2-column grid). */
 .suggest li { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 10px; padding: 7px 10px; border-radius: 7px; cursor: pointer; }
+/* The suggestion picked with the arrow keys gets a background. */
 .suggest li[aria-selected="true"] { background: var(--paper); }
+/* Long suggestion text wraps instead of overflowing. */
 .suggest .s-text { overflow-wrap: anywhere; }
+/* The part of the suggestion that matches what you typed is bold (and not yellow, which <mark> is by default). */
 .suggest .s-text mark { background: none; color: inherit; font-weight: 700; }
+/* The small label under each suggestion: CARD, SET, VERSION, TYPE, or GRADE. */
 .suggest .s-kind { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+/* How many listings match, on the right. */
 .suggest .s-count { grid-column: 2; grid-row: 1 / span 2; font: 600 12px/1 var(--mono); color: var(--muted); }
+/* A row of filter chips (the pill buttons like Pokémon or For sale) that wraps onto more lines if needed. */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+/* One chip, plain until it's picked. */
 .chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--muted); }
+/* The picked chip is dark. aria-pressed is set by the JavaScript. */
 .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+/* The sort menu (Newest first / Price...). */
 select.sel { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+/* The small "3 cards" line above the grid. tabular-nums keeps digits the same width. */
 .count { color: var(--muted); font-size: 13px; margin: 0 0 12px; font-variant-numeric: tabular-nums; }
 
+/* The grid of cards. auto-fill fits as many 178px-or-wider columns as the screen allows: lots on a computer, two on a phone. */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 18px; }
+/* One listing, drawn like a graded card in a clear plastic case (a "slab"): a thick border plus an inner shadow for the edge of the case. */
 .slab {
   display: flex; flex-direction: column; text-align: left; padding: 8px;
   background: var(--panel); border: 2px solid var(--case); border-radius: 12px; cursor: pointer;
   box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--case) 18%, transparent);
   transition: transform 0.15s ease;
 }
+/* Lift the card up 2px when the mouse is over it. */
 .slab:hover { transform: translateY(-2px); }
+/* Sold cards are faded. */
 .slab.sold { opacity: 0.6; }
+/* The label at the top of the slab with the card's name, details, and grade, with a red stripe across the top like a real grading label. */
 .slab-label { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: start; padding: 7px 8px; border-radius: 6px; background: var(--paper); border-top: 4px solid var(--label); }
+/* The card's name. overflow-wrap: anywhere breaks very long words so they don't stick out. */
 .slab-title { font: 800 14px/1.2 var(--display); font-stretch: 112%; overflow-wrap: anywhere; }
+/* The smaller line under the name: set, year, number, version. */
 .slab-sub { grid-column: 1; font-size: 11.5px; color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
+/* The little box on the right of the label showing the condition (NM) or grade (PSA 9). */
 .grade { grid-row: 1 / span 2; grid-column: 2; font: 700 12px/1 var(--mono); text-align: center; padding: 4px 6px; border: 1.5px solid var(--ink); border-radius: 4px; }
+/* The tiny word above it: COND or GRADE. */
 .grade small { display: block; font-size: 9px; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 2px; }
+/* The "window" in the case where the card's photo shows. aspect-ratio 5 / 7 is the shape of a real trading card. */
 .window { margin-top: 8px; aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden; background: var(--paper); display: grid; place-items: center; }
+/* The photo fills the window. object-fit: cover crops the edges instead of stretching the picture. */
 .window img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The "No photo" text when a listing has no picture. */
 .nophoto { color: var(--muted); font-size: 12px; text-align: center; padding: 12px; }
+/* The bottom of the slab: price on the left, the For sale / Trade tag on the right. */
 .slab-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+/* Prices: bold, red, in the number font. */
 .price { font: 700 17px/1 var(--mono); color: var(--label); font-variant-numeric: tabular-nums; }
+/* The small tag saying For sale, Trade, or Sold. */
 .mode { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; }
+/* Green "For sale" tag. color-mix makes a pale version of the green for its background. */
 .mode.sale { color: var(--sale); background: color-mix(in srgb, var(--sale) 14%, transparent); }
+/* Blue "Trade" tag. */
 .mode.trade { color: var(--trade); background: color-mix(in srgb, var(--trade) 14%, transparent); }
+/* Grey "Sold" tag. */
 .mode.sold { color: var(--muted); background: color-mix(in srgb, var(--muted) 16%, transparent); }
+/* Who posted it, at the very bottom. */
 .seller { font-size: 12px; color: var(--muted); margin-top: 6px; overflow-wrap: anywhere; }
 
+/* The dashed box shown when there's nothing to show yet, like "No cards listed yet". */
 .empty { text-align: center; padding: 48px 16px; border: 2px dashed var(--line); border-radius: 12px; color: var(--muted); }
 .empty h2 { margin: 0 0 6px; color: var(--ink); font: 800 22px/1.2 var(--display); font-stretch: 118%; text-wrap: balance; }
 .empty p { margin: 0 auto 16px; max-width: 46ch; }
 
 /* ---------- Value lookup ---------- */
+/* The Value lookup tab. */
 .lookup { max-width: 720px; margin-top: 20px; }
+/* Its big title, "What's this card worth?". text-wrap: balance evens out line lengths in titles. */
 .lookup h2 { margin: 0 0 4px; font: 900 28px/1.1 var(--display); font-stretch: 122%; text-wrap: balance; }
+/* The sentence under the title. */
 .lookup .lede { margin: 0 0 16px; color: var(--muted); max-width: 60ch; }
+/* The lookup boxes in 2 columns... */
 .lookup-form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* ...or 1 column on screens narrower than 560px (phones). */
 @media (max-width: 560px) { .lookup-form { grid-template-columns: 1fr; } }
+/* The "Card or player" box spans both columns. */
 .lookup-form .wide { grid-column: 1 / -1; }
+/* The row of price-site buttons (eBay, PriceCharting, TCGplayer). */
 .lookup-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+/* The "Searching for: ..." line. */
 .lookup-query { font: 500 13px/1.4 var(--mono); color: var(--muted); margin: 12px 0 0; overflow-wrap: anywhere; }
+/* The "Getting an accurate price" tips box, with an orange line on the left. */
 .tips { margin: 20px 0 0; padding: 12px 14px; border-left: 3px solid var(--warn); background: var(--panel); border-radius: 0 8px 8px 0; font-size: 14px; }
 .tips ul { margin: 6px 0 0; padding-left: 18px; }
 
 /* ---------- Sheets ---------- */
+/* Pop-up windows ("sheets") for signing in, listing a card, and a listing's details. A <dialog> is the browser's built-in pop-up. min() means "640px, or the screen width minus 24px, whichever is smaller". */
 dialog.sheet { width: min(640px, calc(100% - 24px)); max-height: calc(100% - 24px); padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--ink); }
+/* The sign-in pop-up is narrower. */
 dialog.sheet.narrow { width: min(420px, calc(100% - 24px)); }
+/* The darkened page behind an open pop-up. */
 dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
+/* The pop-up's title bar with the ✕ button. sticky keeps it visible while you scroll a long form. */
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+/* The pop-up's title. */
 .sheet-head h2 { margin: 0; font: 900 20px/1.1 var(--display); font-stretch: 118%; }
+/* The pop-up's content, with 14px between each part (gap). */
 .sheet-body { padding: 16px 18px 20px; display: grid; gap: 14px; }
+/* A form field: its small label stacked above the box. */
 .field { display: grid; gap: 5px; }
+/* The small uppercase label above each box (like CARD NAME). > means only the span directly inside the field. */
 .field > span { font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+/* The boxes you type in or choose from. */
 .field input, .field select, .field textarea { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); width: 100%; min-width: 0; }
+/* The Notes box is taller and can be dragged taller (resize: vertical). */
 .field textarea { min-height: 76px; resize: vertical; }
+/* Two fields side by side... */
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+/* ...stacked instead on narrow phones. */
 @media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } }
+/* The "Take photo" and "Add from library" buttons. */
 .shot-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+/* The real file-picker inputs are hidden; the nicer-looking buttons above open them (they're <label>s connected to them). */
 .hidden-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+/* The row of small previews of the photos you've added. */
 .thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+/* One preview, card-shaped. */
 .thumb { position: relative; width: 74px; aspect-ratio: 5 / 7; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--paper); }
+/* The preview photo fills it. */
 .thumb img { width: 100%; height: 100%; object-fit: cover; }
+/* The round ✕ in its corner that removes that photo. */
 .thumb button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgb(0 0 0 / 0.65); color: #fff; font-size: 13px; line-height: 1; cursor: pointer; }
+/* Red error messages, like "Add the card's name." */
 .form-error { color: var(--label); font-weight: 600; min-height: 1.5em; margin: 0; }
+/* Small grey notes in forms. */
 .form-note { color: var(--muted); font-size: 13px; margin: 0; }
+/* The buttons at the bottom of a pop-up, lined up on the right. */
 .sheet-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+/* The link-style button that switches between "Sign in" and "Create an account". */
 .switch { background: none; border: 0; padding: 0; color: var(--trade); font-weight: 600; cursor: pointer; text-decoration: underline; }
 
+/* The big photo in a listing's details. max-height: 60vh = no taller than 60% of the screen. */
 .detail-main { aspect-ratio: 5 / 7; max-height: 60vh; margin: 0 auto; border-radius: 10px; overflow: hidden; background: var(--paper); }
+/* object-fit: contain shows the whole photo without cropping. */
 .detail-main img { width: 100%; height: 100%; object-fit: contain; }
+/* The row of small photos under the big one, when there's more than one. */
 .detail-strip { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+/* One small photo you can click to show it big. */
 .detail-strip button { width: 46px; aspect-ratio: 5 / 7; padding: 0; border: 2px solid transparent; border-radius: 5px; overflow: hidden; cursor: pointer; background: var(--paper); }
+/* The one being shown has a red border. */
 .detail-strip button[aria-current="true"] { border-color: var(--label); }
+/* The small photo fills its button. */
 .detail-strip img { width: 100%; height: 100%; object-fit: cover; }
+/* The list of facts (Type, Set, Year...): names on the left, values on the right. */
 .facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+/* dt = the name (like "Year"), in grey. */
 .facts dt { color: var(--muted); }
+/* dd = the value (like "1999"). */
 .facts dd { margin: 0; overflow-wrap: anywhere; }
+/* The box with how to reach the seller. */
 .contact { padding: 10px 12px; border-radius: 8px; background: var(--paper); overflow-wrap: anywhere; }
+/* The "Meet in a public place" reminder. */
 .safety { font-size: 13px; color: var(--muted); margin: 0; }
 
+/* The little message that pops up at the bottom for a few seconds, like "Listing posted". position: fixed keeps it in place even while scrolling. */
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
 
+/* If someone has turned on "reduce motion" in their settings (some people get dizzy from animation), turn off the hover lift. */
 @media (prefers-reduced-motion: reduce) { .slab { transition: none; } .slab:hover { transform: none; } }
 </style>
+<!-- Load Supabase's code library. Supabase is the online database that stores accounts, listings, and photos. This gives us window.supabase to talk to it. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<!-- Load config.js, which says WHICH Supabase project to use (its address and public key). -->
 <script src="config.js"></script>
 </head>
+<!-- Everything inside <body> is what you see on the page. -->
 <body>
+<!-- Keeps the page's content from getting too wide (see .wrap in the CSS). -->
 <div class="wrap">
+  <!-- The header bar at the top of the page. -->
   <header class="top">
+    <!-- The logo and name. -->
     <div class="brand">
+      <!-- The logo, drawn with shapes: a card case outline, a red card, and a white label. aria-hidden means screen readers skip it (it's just decoration). -->
       <svg width="30" height="38" viewBox="0 0 30 38" aria-hidden="true">
         <rect x="1.5" y="1.5" width="27" height="35" rx="3" fill="none" stroke="currentColor" stroke-width="2"></rect>
         <rect x="5" y="6" width="20" height="26" rx="2" fill="#c8202c"></rect>
@@ -199,41 +338,55 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       </svg>
       <h1>Toploader</h1>
     </div>
+    <!-- The three tabs. data-view says which part of the page each one shows; the JavaScript reads it. role and aria-... attributes tell screen readers these are tabs. -->
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" id="tab-browse" aria-selected="true" data-view="browse">Browse</button>
       <button class="tab" role="tab" id="tab-value" aria-selected="false" data-view="value">Value lookup</button>
       <button class="tab" role="tab" id="tab-mine" aria-selected="false" data-view="mine">My cards</button>
     </nav>
+    <!-- Empty for now: the JavaScript fills it with "Sign in", or your name and "Sign out". -->
     <div class="account" id="account"></div>
+    <!-- The "+ List a card" button. The id lets the JavaScript find it and make it open the form. -->
     <button class="btn primary" id="new-listing">+ List a card</button>
   </header>
 
+  <!-- A message bar, hidden until there's something to say. -->
   <p class="notice" id="notice" hidden></p>
 
+  <!-- The listings view, used by both the Browse and My cards tabs. -->
   <section id="view-list">
+    <!-- Search box and sort menu. -->
     <div class="toolbar">
       <div class="search-wrap">
+        <!-- The search box. The role and aria-... attributes tell screen readers that it has a suggestion list (q-list). autocomplete="off" stops the browser showing its own suggestions on top of ours. -->
         <input id="q" class="search" type="search" placeholder="Search cards, sets, players…" aria-label="Search listings"
           role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="q-list" autocomplete="off">
+        <!-- The suggestions dropdown, hidden until you type. The JavaScript fills it in. -->
         <ul id="q-list" class="suggest" role="listbox" aria-label="Suggestions" hidden></ul>
       </div>
+      <!-- The sort menu. Each option's value is what the JavaScript sees. -->
       <select id="sort" class="sel" aria-label="Sort">
         <option value="new">Newest first</option>
         <option value="low">Price: low to high</option>
         <option value="high">Price: high to low</option>
       </select>
     </div>
+    <!-- The filter chips. They're empty here because the JavaScript creates them. -->
     <div class="toolbar" style="margin-top:0">
       <div class="chips" id="cat-chips" aria-label="Card type"></div>
       <div class="chips" id="mode-chips" aria-label="Sale or trade"></div>
     </div>
+    <!-- "3 cards", filled in by the JavaScript. -->
     <p class="count" id="count"></p>
+    <!-- The cards go here. The JavaScript builds one "slab" for each listing. -->
     <div id="grid" class="grid"></div>
   </section>
 
+  <!-- The Value lookup tab, hidden until you click it. -->
   <section id="view-value" class="lookup" hidden>
     <h2>What's this card worth?</h2>
     <p class="lede">Type the card in, then check what it really sold for. Sold prices are the best guide: what people paid, not what sellers are asking.</p>
+    <!-- The boxes you fill in. Every time you type, the JavaScript rebuilds the price-site links below. -->
     <div class="lookup-form">
       <label class="field wide"><span>Card or player</span><input id="v-name" placeholder="e.g. Charizard, Paul Skenes, Black Lotus"></label>
       <label class="field"><span>Set or year</span><input id="v-set" placeholder="e.g. Base Set, 2024 Panini Prizm"></label>
@@ -252,8 +405,10 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       </label>
       <label class="field"><span>Grade</span><input id="v-grade" placeholder="Optional: PSA 10, BGS 9.5"></label>
     </div>
+    <!-- The eBay / PriceCharting / TCGplayer buttons go here. -->
     <div class="lookup-links" id="v-links"></div>
     <p class="lookup-query" id="v-query"></p>
+    <!-- Tips for getting an accurate price. -->
     <div class="tips">
       <b>Getting an accurate price</b>
       <ul>
@@ -266,26 +421,34 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
 </div>
 
 <!-- Sign in / create account -->
+<!-- A <dialog> is a pop-up window that stays hidden until the JavaScript opens it. -->
 <dialog class="sheet narrow" id="sheet-auth" aria-labelledby="auth-title">
+  <!-- A <form> groups the boxes and lets Enter submit them. The JavaScript handles submitting, so the page never reloads. -->
   <form id="auth-form">
     <div class="sheet-head">
       <h2 id="auth-title">Sign in</h2>
       <button class="btn ghost" type="button" id="auth-close" aria-label="Close">✕</button>
     </div>
     <div class="sheet-body">
+      <!-- Display name: only shown when creating an account. A <label> around a box means clicking the label text also selects the box. -->
       <label class="field" id="auth-name-field" hidden><span>Display name</span><input id="auth-name" maxlength="40" placeholder="Shown on your listings" autocomplete="nickname"></label>
+      <!-- type="email" brings up the @ keyboard on phones and checks it looks like an email. required means it can't be left empty. -->
       <label class="field"><span>Email</span><input id="auth-email" type="email" required autocomplete="email"></label>
+      <!-- type="password" hides what you type. minlength="6" requires at least 6 characters (Supabase's minimum). -->
       <label class="field"><span>Password</span><input id="auth-password" type="password" required minlength="6" autocomplete="current-password"></label>
+      <!-- Where errors like "Wrong email or password" appear. role="alert" makes screen readers read them out. -->
       <p class="form-error" id="auth-error" role="alert"></p>
       <div class="sheet-foot">
         <button class="btn primary" type="submit" id="auth-submit">Sign in</button>
       </div>
+      <!-- "New here? Create an account" (or the reverse), filled in by the JavaScript. -->
       <p class="form-note" id="auth-switch-line"></p>
     </div>
   </form>
 </dialog>
 
 <!-- List a card -->
+<!-- The "List a card" form. -->
 <dialog class="sheet" id="sheet-new" aria-labelledby="new-title">
   <form id="new-form">
     <div class="sheet-head">
@@ -295,25 +458,33 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     <div class="sheet-body">
       <div class="field">
         <span>Photos (front and back)</span>
+        <!-- Previews of the photos you've added. -->
         <div class="thumbs" id="new-thumbs"></div>
         <div class="shot-actions" style="margin-top:4px">
+          <!-- These look like buttons but are labels: clicking one opens the hidden file picker it's connected to with for="...". -->
           <label class="btn" for="new-camera">Take photo</label>
           <label class="btn ghost" for="new-file">Add from library</label>
         </div>
+        <!-- capture="environment" opens the phone's back camera. accept="image/*" only allows pictures. -->
         <input class="hidden-input" id="new-camera" type="file" accept="image/*" capture="environment">
+        <!-- Pick photos you already have. multiple lets you choose several at once. -->
         <input class="hidden-input" id="new-file" type="file" accept="image/*" multiple>
       </div>
+      <!-- maxlength stops people typing more than the database allows. -->
       <label class="field"><span>Card name</span><input id="f-title" required maxlength="80" placeholder="e.g. Charizard, LeBron James Rookie"></label>
       <div class="row2">
+        <!-- The card type menu's options (Pokémon, Sports...) are added by the JavaScript. -->
         <label class="field"><span>Type</span><select id="f-category"></select></label>
         <label class="field"><span>Set or series</span><input id="f-set" maxlength="60" placeholder="e.g. Base Set, 2003 Topps Chrome"></label>
       </div>
       <div class="row2">
+        <!-- inputmode="numeric" brings up the number keypad on phones. -->
         <label class="field"><span>Year</span><input id="f-year" inputmode="numeric" maxlength="4" placeholder="1999"></label>
         <label class="field"><span>Card number</span><input id="f-number" maxlength="20" placeholder="4/102"></label>
       </div>
       <label class="field"><span>Version or parallel</span><input id="f-version" maxlength="60" placeholder="Optional: Foil, Purple Prizm, 23/99, 1st Edition"></label>
       <div class="row2">
+        <!-- The card's condition. Each option's value is a short code (NM, LP...) that gets saved. -->
         <label class="field"><span>Condition</span>
           <select id="f-condition">
             <option value="NM">Near Mint</option>
@@ -325,9 +496,11 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
             <option value="GRADED">Graded (slabbed)</option>
           </select>
         </label>
+        <!-- Only shown when "Graded" is chosen above. -->
         <label class="field" id="grade-field" hidden><span>Grade</span><input id="f-grade" maxlength="16" placeholder="PSA 9"></label>
       </div>
       <div class="row2">
+        <!-- Choosing "For trade" hides the price box and shows "Looking for in trade". -->
         <label class="field"><span>Selling or trading</span>
           <select id="f-mode">
             <option value="sale">For sale</option>
@@ -335,15 +508,20 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
             <option value="both">Sale or trade</option>
           </select>
         </label>
+        <!-- inputmode="decimal" brings up a number keypad with a decimal point. -->
         <label class="field" id="price-field"><span>Asking price (USD)</span><input id="f-price" inputmode="decimal" placeholder="25.00"></label>
       </div>
+      <!-- Only shown for trades. -->
       <label class="field" id="wants-field" hidden><span>Looking for in trade</span><input id="f-wants" maxlength="120" placeholder="e.g. Umbreon VMAX, any Jordan rookie"></label>
       <label class="field"><span>Notes</span><textarea id="f-notes" maxlength="500" placeholder="Centering, whitening, edition, anything a buyer should know."></textarea></label>
+      <!-- Required: buyers need some way to contact the seller. -->
       <label class="field"><span>How to reach you</span><input id="f-contact" required maxlength="120" placeholder="e.g. Instagram @handle, or find me at lunch"></label>
       <p class="form-note">Your contact info is public. Don't post your phone number or home address.</p>
+      <!-- Where errors appear, like "Add the card's name." -->
       <p class="form-error" id="new-error" role="alert"></p>
       <div class="sheet-foot">
         <button class="btn ghost" type="button" id="new-cancel">Cancel</button>
+        <!-- type="submit" means pressing it (or Enter) submits the form. -->
         <button class="btn primary" type="submit" id="new-save">Post listing</button>
       </div>
     </div>
@@ -351,6 +529,7 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
 </dialog>
 
 <!-- A listing's details -->
+<!-- A listing's details. Everything inside detail-body is built by the JavaScript when you click a card. -->
 <dialog class="sheet" id="sheet-detail" aria-labelledby="detail-title">
   <div class="sheet-head">
     <h2 id="detail-title">Listing</h2>
@@ -359,111 +538,189 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   <div class="sheet-body" id="detail-body"></div>
 </dialog>
 
+<!-- The pop-up message at the bottom ("Listing posted"). role="status" makes screen readers read it. -->
 <div class="toast" id="toast" role="status" hidden></div>
 
+<!-- From here down is JavaScript: the code that makes the page work. -->
 <script>
+// Wrapping everything in (() => { ... })() keeps all our names private to this page, so they can't
+// clash with other scripts.
 (() => {
+  // A shortcut: $("grid") finds the element with id="grid". "const" makes a name that won't be
+  // changed later. "=>" makes a small function.
   const $ = (id) => document.getElementById(id);
+  // The card types people can pick. The [ ] makes a list (an array).
   const CATEGORIES = ["Pokémon", "Sports", "Magic", "Yu-Gi-Oh!", "One Piece", "Other"];
+  // Turns the short condition codes into words. The { } makes a lookup table (an object): COND.NM
+  // is "Near Mint".
   const COND = { M: "Mint", NM: "Near Mint", LP: "Lightly Played", MP: "Moderately Played", HP: "Heavily Played", DMG: "Damaged", GRADED: "Graded" };
+  // At most 4 photos per listing (the database also enforces this).
   const MAX_PHOTOS = 4;
+  // The name of the photo storage area in Supabase (made by setup.sql).
   const BUCKET = "card-photos";
 
   // Small DOM builder: text always goes in as text, never as HTML.
+  // h() makes a piece of the page. For example h("b", {}, "Hi") makes <b>Hi</b>. attrs are its
+  // settings (class, onclick...), kids is what goes inside. Text is always added as plain text,
+  // never as HTML, so nobody can sneak code into a listing's title.
   function h(tag, attrs = {}, ...kids) {
+    // Make the empty element, like a new <div>.
     const el = document.createElement(tag);
+    // Go through each setting: k is its name, v is its value.
     for (const [k, v] of Object.entries(attrs)) {
+      // Skip settings that are empty or turned off. "continue" jumps to the next one.
       if (v === null || v === undefined || v === false) continue;
+      // "class" sets the CSS class. === means "is exactly equal to".
       if (k === "class") el.className = v;
+      // Settings starting with "on" (onclick) become actions: onclick runs v when it's clicked.
+      // k.slice(2) cuts off "on", leaving "click".
       else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      // Anything else becomes a normal HTML attribute. "a ? b : c" means "if a then b, otherwise
+      // c".
       else el.setAttribute(k, v === true ? "" : v);
     }
+    // Add each child: elements as they are, everything else as plain text.
     for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) el.append(kid instanceof Node ? kid : String(kid));
+    // Hand back the finished element.
     return el;
   }
+  // Formats a price: 2500 becomes "$2,500", 12.5 becomes "$12.50", 10 becomes "$10". No price gives
+  // an empty string. isFinite checks it's a real number.
   const money = (n) => (n === null || n === undefined || !isFinite(n)) ? "" : "$" + (n >= 100 ? Math.round(n).toLocaleString("en-US") : Number(n).toFixed(2).replace(/\.00$/, ""));
+  // Shows a short message at the bottom of the screen for 3.2 seconds.
   const toast = (text) => {
     const t = $("toast");
     t.textContent = text;
     t.hidden = false;
+    // If an older message is still waiting to hide, cancel that, so the new one gets its full 3.2
+    // seconds.
     clearTimeout(toast.timer);
+    // setTimeout runs something later: here, hide the message after 3200 milliseconds (3.2
+    // seconds).
     toast.timer = setTimeout(() => (t.hidden = true), 3200);
   };
 
   // ---------- Connecting ----------
+  // Read the settings from config.js. "|| {}" means "or an empty object if config.js didn't load".
   const cfg = window.TOPLOADER_CONFIG || {};
+  // Connect to Supabase. sb is what we use for everything: accounts, listings, photos. If the
+  // settings are missing it's null, and the page shows "Not connected yet".
   const sb = cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null;
+  // Turns a stored photo's file name into a web address the <img> can show.
   const photoUrl = (path) => sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 
+  // Everything the page needs to remember right now: which tab is open (view), the chosen type
+  // filter (cat), sale/trade filter (mode), search text (q), sort order, the listings, whether
+  // they've loaded, and who's signed in (user, or null).
   const state = { view: "browse", cat: "All", mode: "all", q: "", sort: "new", listings: [], loaded: false, user: null };
+  // true if listing l was posted by whoever is signed in. Boolean() turns the result into plain
+  // true or false.
   const isMine = (l) => Boolean(state.user) && l.user_id === state.user.id;
+  // Your display name. ?. means "if this exists" (so it doesn't crash when signed out). Falls back
+  // to the start of your email, then "A collector".
   const myName = () => state.user?.user_metadata?.name || (state.user?.email || "").split("@")[0] || "A collector";
 
+  // Shows a message in the bar under the header. With nothing passed in, it hides the bar.
   function showNotice(...parts) {
     const n = $("notice");
     n.hidden = !parts.length;
     n.replaceChildren(...parts);
   }
 
+  // Downloads all the listings from the database (newest first, up to 500) and redraws the page.
+  // "async" means it can wait for the internet with "await" without freezing the page.
   async function loadListings() {
+    // Ask Supabase for every column ("*") of the listings table. We get back data (the listings) or
+    // error (what went wrong).
     const { data, error } = await sb.from("listings").select("*").order("created_at", { ascending: false }).limit(500);
+    // Remember that loading has finished (even if it failed), so we stop showing "Loading...".
     state.loaded = true;
+    // If something went wrong, say so and stop here.
     if (error) {
       showNotice(h("b", {}, "Couldn't load listings. "), "Check your connection and reload the page.");
       return render();
     }
     showNotice();
+    // Save the listings (or an empty list) and redraw.
     state.listings = data || [];
     render();
   }
 
   // ---------- Account ----------
+  // Draws the top-right corner: "Sign in", or your name and "Sign out".
   function renderAccount() {
     const box = $("account");
+    // ! means "not": if there's no database connection, leave it empty.
     if (!sb) return box.replaceChildren();
     if (state.user) box.replaceChildren(h("span", { class: "me" }, myName()), h("button", { class: "btn small ghost", onclick: signOut }, "Sign out"));
     else box.replaceChildren(h("button", { class: "btn", onclick: () => openAuth(false) }, "Sign in"));
   }
 
+  // true when the sign-in pop-up is in "Create an account" mode. "let" is like const, but it can
+  // change.
   let creating = false;
+  // Opens the sign-in pop-up, in "create an account" mode if create is true. It changes the title,
+  // the button text, whether the name box shows, and the switch link at the bottom.
   function openAuth(create) {
     creating = create;
     $("auth-title").textContent = create ? "Create an account" : "Sign in";
     $("auth-submit").textContent = create ? "Create account" : "Sign in";
     $("auth-name-field").hidden = !create;
+    // Helps password managers: suggest a new password when signing up, fill in the saved one when
+    // signing in.
     $("auth-password").autocomplete = create ? "new-password" : "current-password";
     $("auth-switch-line").replaceChildren(
       create ? "Already have an account? " : "New here? ",
       h("button", { class: "switch", type: "button", onclick: () => openAuth(!create) }, create ? "Sign in" : "Create an account"));
     $("auth-error").textContent = "";
+    // Open the pop-up if it isn't open already.
     if (!$("sheet-auth").open) $("sheet-auth").showModal();
   }
+  // The ✕ button closes it. addEventListener("click", ...) means "when this is clicked, do this".
   $("auth-close").addEventListener("click", () => $("sheet-auth").close());
 
+  // When the sign-in form is submitted (button or Enter):
   $("auth-form").addEventListener("submit", async (e) => {
+    // Stop the browser's normal form behavior, which would reload the page.
     e.preventDefault();
+    // Read what was typed. .trim() removes spaces at the start and end.
     const email = $("auth-email").value.trim();
     const password = $("auth-password").value;
     const err = $("auth-error");
     const btn = $("auth-submit");
+    // Disable the button so it can't be pressed twice while we wait.
     btn.disabled = true;
     err.textContent = "";
+    // try { ... } catch { ... }: if anything inside "try" fails, jump to "catch" and show an error
+    // instead of crashing.
     try {
+      // Creating an account:
       if (creating) {
         const name = $("auth-name").value.trim();
+        // No name typed? "throw" stops here and jumps to catch with this message.
         if (!name) throw new Error("Pick a display name for your listings.");
+        // Ask Supabase to create the account, saving the display name with it. emailRedirectTo is
+        // where a confirmation email link would bring you back to.
         const { data, error } = await sb.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: location.href.split("#")[0] } });
         if (error) throw error;
+        // No session means Supabase wants the email confirmed first (only if "Confirm email" is
+        // turned on in Supabase).
         if (!data.session) {
           $("sheet-auth").close();
           return toast("Check your email to confirm your account, then sign in.");
         }
+      // Signing in to an existing account:
       } else {
+        // Check the email and password with Supabase.
         const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
+      // It worked: close the pop-up. (The page notices you're signed in by itself; see
+      // onAuthStateChange at the bottom.)
       $("sheet-auth").close();
       toast(creating ? "Account created" : "Signed in");
+    // Something went wrong: turn Supabase's technical message into a friendly one. /.../i.test(m)
+    // checks whether the message contains those words, ignoring upper/lower case.
     } catch (e2) {
       const m = String(e2?.message || "");
       err.textContent = /invalid login/i.test(m) ? "Wrong email or password."
@@ -471,11 +728,13 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
         : /email not confirmed/i.test(m) ? "Confirm your email first: check your inbox for the link."
         : /rate limit/i.test(m) ? "Too many tries. Wait a few minutes and try again."
         : m || "That didn't work. Try again.";
+    // "finally" always runs at the end, worked or not: turn the button back on.
     } finally {
       btn.disabled = false;
     }
   });
 
+  // Signs you out, and leaves the My cards tab since there's nothing to show there anymore.
   async function signOut() {
     await sb.auth.signOut();
     toast("Signed out");
@@ -483,47 +742,71 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   }
 
   // ---------- Views ----------
+  // Switches tabs: remembers the new one, highlights its tab button, shows the right part of the
+  // page, and redraws.
   function setView(view) {
     state.view = view;
+    // querySelectorAll(".tab") finds every tab button. Mark only the chosen one as selected (the
+    // CSS makes it dark).
     for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t.dataset.view === view));
+    // Hide the listings on the Value lookup tab, and the other way around.
     $("view-list").hidden = view === "value";
     $("view-value").hidden = view !== "value";
     render();
   }
+  // Make each tab switch to its view when clicked. t.dataset.view reads its data-view="..." from
+  // the HTML.
   for (const t of document.querySelectorAll(".tab")) t.addEventListener("click", () => setView(t.dataset.view));
 
+  // Draws the filter chips. Clicking one saves the choice in state and redraws. aria-pressed marks
+  // the chosen one (the CSS makes it dark).
   function renderChips() {
     $("cat-chips").replaceChildren(...["All", ...CATEGORIES].map((c) =>
       h("button", { class: "chip", "aria-pressed": String(state.cat === c), onclick: () => { state.cat = c; render(); } }, c)));
+    // Each pair is [the value we save, the text shown].
     const modes = [["all", "Sale or trade"], ["sale", "For sale"], ["trade", "For trade"]];
     $("mode-chips").replaceChildren(...modes.map(([v, label]) =>
       h("button", { class: "chip", "aria-pressed": String(state.mode === v), onclick: () => { state.mode = v; render(); } }, label)));
   }
 
+  // The listings the current tab is about: only yours on My cards; everyone's unsold ones on
+  // Browse. .filter() keeps only the items that pass the test.
   const pool = () => (state.view === "mine" ? state.listings.filter(isMine) : state.listings.filter((l) => !l.sold));
 
+  // Redraws the whole page from "state". Whenever anything changes (a filter, a search, new
+  // listings), we update state and call render().
   function render() {
     renderChips();
     renderAccount();
+    // The Value lookup tab has its own drawing (renderLookup), so stop here.
     if (state.view === "value") return;
     const grid = $("grid");
+    // Not connected to the database: say so.
     if (!sb) {
       $("count").textContent = "";
       return grid.replaceChildren(empty("Not connected yet", "This site's database hasn't been set up yet. Fill in config.js with the Supabase project's URL and anon key."));
     }
+    // My cards while signed out: ask them to sign in. && means "and".
     if (state.view === "mine" && !state.user) {
       $("count").textContent = "";
       return grid.replaceChildren(empty("Sign in to see your cards", "Your listings show up here once you've posted some.", h("button", { class: "btn primary", onclick: () => openAuth(false) }, "Sign in")));
     }
+    // Still downloading: show "Loading listings...".
     if (!state.loaded) {
       $("count").textContent = "";
       return grid.replaceChildren(empty("Loading listings…", "Cards people have posted show up here."));
     }
+    // Start with this tab's listings, then narrow them down:
     let list = pool();
+    // ...only the chosen card type (!== means "is not")...
     if (state.cat !== "All") list = list.filter((l) => l.category === state.cat);
+    // ...only for sale, or only for trade ("both" counts as either). || means "or"...
     if (state.mode !== "all") list = list.filter((l) => l.mode === state.mode || l.mode === "both");
+    // ...and only listings whose details contain the search text, ignoring upper/lower case.
     const text = state.q.trim().toLowerCase();
     if (text) list = list.filter((l) => [l.title, l.set_name, l.year, l.number, l.version, l.category, l.notes, l.wants, l.grade].join(" ").toLowerCase().includes(text));
+    // Sort by price if asked. Listings without a price (trades) go last. The newest-first order
+    // already comes from the database.
     if (state.sort !== "new") {
       list = [...list].sort((a, b) => {
         if (a.price == null) return 1;
@@ -531,7 +814,10 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
         return state.sort === "low" ? a.price - b.price : b.price - a.price;
       });
     }
+    // "1 card" or "5 cards". The `...${...}...` is a template: the parts in ${ } get filled in.
     $("count").textContent = list.length ? `${list.length} card${list.length === 1 ? "" : "s"}` : "";
+    // Nothing to show: if there are no listings at all, invite them to post the first one; if the
+    // filters hid everything, say "No cards match".
     if (!list.length) {
       const mine = state.view === "mine";
       return grid.replaceChildren(!pool().length
@@ -540,28 +826,42 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
             h("button", { class: "btn primary", onclick: openNew }, "+ List a card"))
         : empty("No cards match", "Try a different search, or clear the filters."));
     }
+    // Otherwise turn each listing into a card (slab) and put them all in the grid. .map() runs
+    // slab() on every listing; ... spreads the list out.
     grid.replaceChildren(...list.map(slab));
   }
 
+  // Makes the dashed "nothing here" box, with a title, a sentence, and optionally a button.
+  // grid-column: 1 / -1 makes it span the whole grid.
   function empty(title, text, action = null) {
     return h("div", { class: "empty", style: "grid-column: 1 / -1" }, h("h2", {}, title), h("p", {}, text), action);
   }
+  // The little box on the slab's label: the grade (PSA 9) for graded cards, otherwise the condition
+  // code (NM).
   const gradeBadge = (l) => l.condition === "GRADED"
     ? h("div", { class: "grade" }, h("small", {}, "GRADE"), l.grade || "Slab")
     : h("div", { class: "grade" }, h("small", {}, "COND"), l.condition || "NM");
+  // The line under the card's name, like "Base Set · 1999 · #4/102". .filter(Boolean) drops the
+  // empty parts, .join(" · ") puts dots between the rest.
   const subline = (l) => [l.set_name, l.year, l.number && "#" + l.number, l.version].filter(Boolean).join(" · ") || l.category;
+  // The tag at the bottom of the slab: Sold, Trade, Sale / trade, or For sale.
   function modeTag(l) {
     if (l.sold) return h("span", { class: "mode sold" }, "Sold");
     if (l.mode === "trade") return h("span", { class: "mode trade" }, "Trade");
     if (l.mode === "both") return h("span", { class: "mode sale" }, "Sale / trade");
     return h("span", { class: "mode sale" }, "For sale");
   }
+  // The price to show, or nothing for trade-only listings. != null means "has a price".
   const priceText = (l) => (l.price != null && l.mode !== "trade" ? money(Number(l.price)) : "");
 
+  // Builds one listing card (a "slab"). Clicking it opens the details.
   function slab(l) {
+    // The first photo, if there is one ([0] is the first item in a list).
     const photo = l.photos?.[0];
     return h("button", { class: "slab" + (l.sold ? " sold" : ""), onclick: () => openDetail(l), "aria-label": `${l.title}, ${priceText(l) || "for trade"}` },
       h("div", { class: "slab-label" }, h("div", { class: "slab-title" }, l.title), h("div", { class: "slab-sub" }, subline(l)), gradeBadge(l)),
+      // Show the photo. If it fails to load (onerror), swap in "Photo unavailable". loading: "lazy"
+      // only downloads photos as they scroll into view, which makes the page faster.
       h("div", { class: "window" }, photo
         ? h("img", { src: photoUrl(photo), alt: "", loading: "lazy", onerror: (e) => e.target.replaceWith(h("span", { class: "nophoto" }, "Photo unavailable")) })
         : h("span", { class: "nophoto" }, "No photo")),
@@ -569,17 +869,27 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       h("div", { class: "seller" }, isMine(l) ? "Your listing" : (l.seller_name || "A collector")));
   }
 
+  // When a different sort is chosen, save it and redraw.
   $("sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
 
   // ---------- Search suggestions ----------
   // As you type, suggest things that are actually listed, with how many match.
+  // The search box...
   const q = $("q");
+  // ...and its suggestions list.
   const qList = $("q-list");
+  // The suggestions shown right now.
   let suggestions = [];
+  // Which suggestion the arrow keys are on (-1 = none).
   let active = -1;
 
+  // Collects everything worth suggesting from the current listings (names, sets, versions, years,
+  // types, grades), and counts how many listings have each one.
   function buildIndex() {
+    // A Map is a lookup table: it lets us find a term again to add to its count.
     const terms = new Map();
+    // Adds one term, or adds 1 to its count if it's already there. Terms shorter than 2 letters are
+    // skipped.
     const addTerm = (text, kind) => {
       text = String(text || "").trim();
       if (text.length < 2) return;
@@ -588,6 +898,7 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       t.count++;
       terms.set(key, t);
     };
+    // Go through each listing and add its details.
     for (const l of pool()) {
       addTerm(l.title, "Card");
       addTerm(l.set_name, "Set");
@@ -596,24 +907,34 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       addTerm(l.category, "Type");
       addTerm(l.condition === "GRADED" ? l.grade : "", "Grade");
     }
+    // Hand back the terms as a list.
     return [...terms.values()];
   }
 
+  // Updates the suggestions dropdown for what's in the search box.
   function suggest() {
     const text = q.value.trim().toLowerCase();
     if (!text) return closeSuggest();
+    // Split what was typed into words (/\s+/ means "one or more spaces").
     const words = text.split(/\s+/);
     const scored = [];
+    // Keep terms that contain every typed word (but not one that's exactly what's typed already).
+    // Rank them: 0 if the term starts with the text, 1 if one of its words does, 2 if it's
+    // somewhere in the middle.
     for (const t of buildIndex()) {
       const lower = t.text.toLowerCase();
       if (!words.every((w) => lower.includes(w)) || lower === text) continue;
       const rank = lower.startsWith(text) ? 0 : lower.split(/[\s\-/]+/).some((w) => w.startsWith(words[0])) ? 1 : 2;
       scored.push({ ...t, rank });
     }
+    // Best first: lowest rank, then the most listings, then A to Z.
     scored.sort((a, b) => a.rank - b.rank || b.count - a.count || a.text.localeCompare(b.text));
+    // Keep the top 8.
     suggestions = scored.slice(0, 8);
     active = -1;
     if (!suggestions.length) return closeSuggest();
+    // Build a row for each suggestion. onmousedown (instead of onclick) picks it before the search
+    // box loses focus and closes the list.
     qList.replaceChildren(...suggestions.map((sug, i) => {
       const li = h("li", { id: `q-opt-${i}`, role: "option", "aria-selected": "false", onmousedown: (e) => { e.preventDefault(); pick(i); } },
         h("span", { class: "s-text" }, highlight(sug.text, words[0])),
@@ -622,10 +943,12 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       li.setAttribute("aria-label", `${sug.text}, ${sug.kind}, ${sug.count} listing${sug.count === 1 ? "" : "s"}`);
       return li;
     }));
+    // Show the list, and tell screen readers it's open.
     qList.hidden = false;
     q.setAttribute("aria-expanded", "true");
     q.removeAttribute("aria-activedescendant");
   }
+  // Makes the part of a suggestion that matches what was typed bold, using <mark>.
   function highlight(text, word) {
     const i = text.toLowerCase().indexOf(word);
     if (i < 0 || !word) return text;
@@ -633,6 +956,7 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     frag.append(text.slice(0, i), h("mark", {}, text.slice(i, i + word.length)), text.slice(i + word.length));
     return frag;
   }
+  // Highlights suggestion number i (for the arrow keys) and scrolls it into view if needed.
   function setActive(i) {
     active = i;
     [...qList.children].forEach((li, n) => li.setAttribute("aria-selected", String(n === i)));
@@ -641,6 +965,8 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       qList.children[i].scrollIntoView({ block: "nearest" });
     } else q.removeAttribute("aria-activedescendant");
   }
+  // Uses suggestion number i: a card type becomes a filter chip; anything else goes into the search
+  // box. Then close the list and redraw.
   function pick(i) {
     const sug = suggestions[i];
     if (!sug) return;
@@ -652,6 +978,7 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     closeSuggest();
     render();
   }
+  // Hides and empties the suggestions list.
   function closeSuggest() {
     qList.hidden = true;
     qList.replaceChildren();
@@ -660,9 +987,15 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     q.setAttribute("aria-expanded", "false");
     q.removeAttribute("aria-activedescendant");
   }
+  // Every time the search text changes: save it, redraw the cards, update suggestions.
   q.addEventListener("input", () => { state.q = q.value; render(); suggest(); });
+  // Clicking back into a box that already has text shows its suggestions again.
   q.addEventListener("focus", () => q.value.trim() && suggest());
+  // Clicking away closes the list. setTimeout waits a moment so a click on a suggestion still
+  // counts.
   q.addEventListener("blur", () => setTimeout(closeSuggest, 120));
+  // Keyboard: down/up arrows move through suggestions (% wraps around from the last back to the
+  // first), Enter picks one, Escape closes the list.
   q.addEventListener("keydown", (e) => {
     if (qList.hidden) {
       if (e.key === "ArrowDown" && q.value.trim()) { suggest(); e.preventDefault(); }
@@ -675,18 +1008,24 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   });
 
   // ---------- Details ----------
+  // Opens the details pop-up for listing l.
   function openDetail(l) {
     $("detail-title").textContent = l.title;
+    // Its photos (or an empty list).
     const photos = l.photos || [];
     const main = h("div", { class: "detail-main" });
     const strip = h("div", { class: "detail-strip" });
+    // Shows photo number i big, and marks its small photo as the current one.
     const show = (i) => {
       main.replaceChildren(photos.length ? h("img", { src: photoUrl(photos[i]), alt: `Photo ${i + 1} of ${l.title}` }) : h("div", { class: "window" }, h("span", { class: "nophoto" }, "No photo")));
       [...strip.children].forEach((b, n) => b.setAttribute("aria-current", String(n === i)));
     };
+    // A small clickable photo for each one. .forEach runs this for every item in the list.
     photos.forEach((p, i) => strip.append(h("button", { type: "button", "aria-label": `Photo ${i + 1}`, onclick: () => show(i) }, h("img", { src: photoUrl(p), alt: "" }))));
+    // Start with the first photo.
     show(0);
 
+    // The list of facts. add() only adds a line when there's a value, so empty fields don't show.
     const facts = h("dl", { class: "facts" });
     const add = (k, v) => v && facts.append(h("dt", {}, k), h("dd", {}, v));
     add("Type", l.category);
@@ -697,14 +1036,18 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     add("Condition", l.condition === "GRADED" ? `Graded ${l.grade || ""}`.trim() : COND[l.condition]);
     add("Price", priceText(l));
     add("Wants", l.wants);
+    // The date it was posted, written the way the viewer's country writes dates.
     add("Listed", new Date(l.created_at).toLocaleDateString());
 
+    // Your own listings get Mark sold and Delete buttons.
     const actions = h("div", { class: "sheet-foot" });
     if (isMine(l)) {
       actions.append(
         h("button", { class: "btn", onclick: () => setSold(l, !l.sold) }, l.sold ? "Mark available" : "Mark sold"),
         h("button", { class: "btn danger", onclick: () => confirmDelete(l, actions) }, "Delete"));
     }
+    // Put it all in the pop-up: photos, label, price, facts, notes, contact, a safety tip (on other
+    // people's listings), and the buttons. Then open it.
     $("detail-body").replaceChildren(
       photos.length > 1 ? h("div", {}, main, strip) : main,
       h("div", { class: "slab-label" }, h("div", { class: "slab-title" }, l.title), h("div", { class: "slab-sub" }, subline(l)), gradeBadge(l)),
@@ -716,8 +1059,11 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       actions);
     $("sheet-detail").showModal();
   }
+  // The ✕ closes it.
   $("detail-close").addEventListener("click", () => $("sheet-detail").close());
 
+  // Marks your listing sold (or available again) in the database, then reloads the listings. The
+  // database rules only allow this on your own listings.
   async function setSold(l, sold) {
     const { error } = await sb.from("listings").update({ sold }).eq("id", l.id);
     if (error) return toast("Couldn't update. Try again.");
@@ -726,6 +1072,8 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     loadListings();
   }
 
+  // Asks "Delete this listing?" in place of the buttons. Delete removes the listing from the
+  // database and its photos from storage.
   function confirmDelete(l, actions) {
     actions.replaceChildren(
       h("span", { class: "form-note", style: "margin-right:auto" }, "Delete this listing and its photos?"),
@@ -742,18 +1090,24 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
 
   // Some networks (school Wi-Fi) freeze connections now and then. Give each
   // try 25 seconds, and try up to 3 times when the network is the problem.
+  // Runs something that uses the internet (run), up to 3 times if the network is the problem. Each
+  // try gets 25 seconds. Promise.race means "whichever finishes first": the real request, or the
+  // 25-second timer.
   async function retry(run, button, label) {
     let last = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       if (attempt > 1) button.textContent = `${label}… (try ${attempt} of 3)`;
       try {
         const result = await Promise.race([run(), new Promise((_, no) => setTimeout(() => no(new Error("timed out")), 25000))]);
+        // If it worked, or failed for a reason other than the network (like a rule saying no), stop
+        // trying and hand back the result.
         const msg = String(result?.error?.message || "");
         if (!result?.error || !/fetch|network|timed out|load failed/i.test(msg)) return result;
         last = result;
       } catch (e) {
         last = { error: e };
       }
+      // Wait 1.5 seconds before trying again.
       await new Promise((r) => setTimeout(r, 1500));
     }
     return last;
@@ -761,26 +1115,41 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
 
   // ---------- Photos ----------
   // Shrink to at most 1400px on the long side as JPEG, so uploads are quick.
+  // Makes a photo smaller before uploading: at most 1400 pixels on its longest side, saved as a
+  // JPEG. Phone photos are often 4000+ pixels, so this makes uploads much faster. It returns a
+  // Promise: a value that arrives later, which we can "await".
   function shrink(file, max = 1400) {
     return new Promise((resolve) => {
+      // A temporary address for the photo file, so an <img> can load it.
       const url = URL.createObjectURL(file);
       const img = new Image();
+      // Once the photo has loaded:
       img.onload = () => {
+        // How much to shrink it (never enlarge: at most 1).
         const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        // Draw it onto a canvas (a blank picture) at the smaller size.
         const c = document.createElement("canvas");
         c.width = Math.round(img.naturalWidth * scale);
         c.height = Math.round(img.naturalHeight * scale);
         c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        // Free the temporary address, which we don't need anymore.
         URL.revokeObjectURL(url);
+        // Save the canvas as a JPEG at 86% quality. If that fails, just use the original file.
         c.toBlob((b) => resolve(b || file), "image/jpeg", 0.86);
       };
+      // If the photo can't be read, use the original file.
       img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      // Start loading the photo (this is what triggers onload above).
       img.src = url;
     });
   }
 
   // ---------- List a card ----------
+  // The photos added to the form so far, not uploaded yet. Each is { blob: the shrunk photo, url: a
+  // preview address }.
   let draft = [];
+  // Opens the "List a card" form, but you have to be signed in first. reset() clears the form from
+  // last time.
   function openNew() {
     if (!sb) return toast("The site isn't connected to its database yet.");
     if (!state.user) {
@@ -794,19 +1163,26 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     renderThumbs();
     $("sheet-new").showModal();
   }
+  // "+ List a card" opens the form; ✕ and Cancel close it.
   $("new-listing").addEventListener("click", openNew);
   $("new-close").addEventListener("click", () => $("sheet-new").close());
   $("new-cancel").addEventListener("click", () => $("sheet-new").close());
+  // Fill the Type menu with the card types.
   $("f-category").replaceChildren(...CATEGORIES.map((c) => h("option", { value: c }, c)));
+  // Shows only the boxes that make sense: Grade only for graded cards, Price unless it's
+  // trade-only, "Looking for" unless it's sale-only.
   function syncForm() {
     $("grade-field").hidden = $("f-condition").value !== "GRADED";
     const mode = $("f-mode").value;
     $("price-field").hidden = mode === "trade";
     $("wants-field").hidden = mode === "sale";
   }
+  // Run it again whenever Condition or Selling/trading changes.
   $("f-condition").addEventListener("change", syncForm);
   $("f-mode").addEventListener("change", syncForm);
 
+  // Adds the chosen photos to the draft (up to 4), shrinking each one, then redraws the previews.
+  // Files that aren't images are skipped.
   async function addPhotos(files) {
     for (const file of files) {
       if (draft.length >= MAX_PHOTOS) { toast(`Up to ${MAX_PHOTOS} photos per listing`); break; }
@@ -816,42 +1192,61 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     }
     renderThumbs();
   }
+  // Draws the photo previews, each with a ✕ to remove it. splice(i, 1) removes 1 item at position
+  // i.
   function renderThumbs() {
     $("new-thumbs").replaceChildren(...draft.map((p, i) =>
       h("div", { class: "thumb" }, h("img", { src: p.url, alt: `Photo ${i + 1}` }),
         h("button", { type: "button", "aria-label": `Remove photo ${i + 1}`, onclick: () => { draft.splice(i, 1); renderThumbs(); } }, "✕"))));
   }
+  // When photos are picked (camera or library), add them. Clearing value lets you pick the same
+  // photo again later.
   for (const id of ["new-camera", "new-file"]) $(id).addEventListener("change", (e) => { addPhotos([...e.target.files]); e.target.value = ""; });
 
+  // Posting a card: check the form, upload the photos, then save the listing.
   $("new-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const err = $("new-error");
     const title = $("f-title").value.trim();
     const contact = $("f-contact").value.trim();
     const mode = $("f-mode").value;
+    // Clean up the price: remove $, commas, and spaces (so "$1,200" becomes "1200").
     const raw = $("f-price").value.replace(/[$,\s]/g, "");
+    // No price for trades or an empty box; otherwise turn the text into a number.
     const price = mode === "trade" || raw === "" ? null : Number(raw);
+    // Check the required boxes and the price, and stop with a message if something's wrong.
     if (!title) return (err.textContent = "Add the card's name.");
     if (!contact) return (err.textContent = "Say how buyers can reach you.");
     if (price !== null && (!isFinite(price) || price < 0)) return (err.textContent = "Enter the price as a number, like 25 or 12.50.");
     const save = $("new-save");
     save.disabled = true;
     err.textContent = "";
+    // File names of the photos uploaded so far (so they can be cleaned up if posting fails).
     const uploaded = [];
     try {
+      // Upload each photo into your own folder in storage (named after your account ID). The
+      // database rules don't let anyone upload into someone else's folder.
       for (const [i, p] of draft.entries()) {
         save.textContent = `Uploading photo ${i + 1} of ${draft.length}…`;
         // A fresh file name each try (overwriting isn't allowed by the storage rules).
+        // The photo's file name: your account ID, a random unique ID (crypto.randomUUID()), and
+        // .jpg.
         let path = "";
         const { error } = await retry(() => {
           path = `${state.user.id}/${crypto.randomUUID()}.jpg`;
           return sb.storage.from(BUCKET).upload(path, p.blob, { contentType: "image/jpeg" });
         }, save, `Uploading photo ${i + 1}`);
+        // If it still failed after 3 tries, stop and jump to catch.
         if (error) throw { photo: true, error };
         uploaded.push(path);
       }
+      // Now save the listing itself:
       save.textContent = "Posting…";
+      // Give the listing its ID here, so if the network makes us try twice, the second try can't
+      // make a duplicate.
       const id = crypto.randomUUID(); // set here, so a retried post can't make a duplicate
+      // Save it to the listings table. upsert with ignoreDuplicates means "add it, unless one with
+      // this ID is already there". Every name below matches a column made in setup.sql.
       const { error } = await retry(() => sb.from("listings").upsert({
         id,
         user_id: state.user.id,
@@ -871,16 +1266,21 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
         contact,
         photos: uploaded,
       }, { onConflict: "id", ignoreDuplicates: true }), save, "Posting");
+      // Couldn't save: jump to catch.
       if (error) throw { error };
+      // It worked: close the form, say so, reload the listings, and show the My cards tab.
       $("sheet-new").close();
       toast("Listing posted");
       await loadListings();
       setView("mine");
+    // Something failed: delete any photos already uploaded for this listing (so they don't take up
+    // space), and explain what happened.
     } catch (e2) {
       if (uploaded.length) sb.storage.from(BUCKET).remove(uploaded);
       err.textContent = e2?.photo
         ? "A photo didn't upload after 3 tries. The network may be blocking it: press Post listing again, or try without that photo."
         : "Couldn't post after 3 tries. The network may be blocking it: press Post listing again in a minute.";
+    // Either way, turn the Post button back on.
     } finally {
       save.disabled = false;
       save.textContent = "Post listing";
@@ -888,11 +1288,18 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   });
 
   // ---------- Value lookup ----------
+  // Builds the price-site buttons from whatever's typed in the Value lookup boxes.
   function renderLookup() {
+    // Read each box, drop the empty ones, and join the rest into one search.
     const parts = ["v-name", "v-set", "v-number", "v-version", "v-grade"].map((id) => $(id).value.trim()).filter(Boolean);
     const query = parts.join(" ");
+    // Make the search safe to put in a web address (spaces become %20, and so on).
     const enc = encodeURIComponent(query);
+    // No card name yet: show a hint instead of buttons.
     if (!$("v-name").value.trim()) {
+      // One button per price site, each opening that site's search for this card in a new tab
+      // (target: "_blank"). LH_Sold=1 makes eBay show sold items only, which shows what people
+      // really paid.
       $("v-links").replaceChildren(h("span", { class: "form-note" }, "Type a card or player to get price links."));
       $("v-query").textContent = "";
       return;
@@ -903,21 +1310,28 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       h("a", { class: "btn", href: `https://www.tcgplayer.com/search/all/product?q=${enc}`, target: "_blank", rel: "noopener" }, "TCGplayer ↗"));
     $("v-query").textContent = "Searching for: " + query;
   }
+  // Rebuild the buttons as you type, or change the Version menu.
   for (const id of ["v-name", "v-set", "v-number", "v-grade"]) $(id).addEventListener("input", renderLookup);
   $("v-version").addEventListener("change", renderLookup);
 
   // ---------- Start up ----------
+  // Everything below runs once, when the page opens. First, draw the Value lookup hint.
   renderLookup();
+  // No database connection: hide "+ List a card" and show "Not connected yet".
   if (!sb) {
     state.loaded = true;
     $("new-listing").hidden = true;
     return render();
   }
+  // Supabase tells us whenever you sign in or out (and right away, if you're still signed in from
+  // last time). Update who's signed in and redraw.
   sb.auth.onAuthStateChange((_event, session) => {
     state.user = session?.user || null;
     render();
   });
+  // Draw the page (it says "Loading..." for now)...
   render();
+  // ...then download the listings, which redraws it again with the cards.
   loadListings();
 })();
 </script>
