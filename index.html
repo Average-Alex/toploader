@@ -740,6 +740,25 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       } }, "Delete"));
   }
 
+  // Some networks (school Wi-Fi) freeze connections now and then. Give each
+  // try 25 seconds, and try up to 3 times when the network is the problem.
+  async function retry(run, button, label) {
+    let last = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (attempt > 1) button.textContent = `${label}… (try ${attempt} of 3)`;
+      try {
+        const result = await Promise.race([run(), new Promise((_, no) => setTimeout(() => no(new Error("timed out")), 25000))]);
+        const msg = String(result?.error?.message || "");
+        if (!result?.error || !/fetch|network|timed out|load failed/i.test(msg)) return result;
+        last = result;
+      } catch (e) {
+        last = { error: e };
+      }
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    return last;
+  }
+
   // ---------- Photos ----------
   // Shrink to at most 1400px on the long side as JPEG, so uploads are quick.
   function shrink(file, max = 1400) {
@@ -822,13 +841,19 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     try {
       for (const [i, p] of draft.entries()) {
         save.textContent = `Uploading photo ${i + 1} of ${draft.length}…`;
-        const path = `${state.user.id}/${crypto.randomUUID()}.jpg`;
-        const { error } = await sb.storage.from(BUCKET).upload(path, p.blob, { contentType: "image/jpeg" });
+        // A fresh file name each try (overwriting isn't allowed by the storage rules).
+        let path = "";
+        const { error } = await retry(() => {
+          path = `${state.user.id}/${crypto.randomUUID()}.jpg`;
+          return sb.storage.from(BUCKET).upload(path, p.blob, { contentType: "image/jpeg" });
+        }, save, `Uploading photo ${i + 1}`);
         if (error) throw { photo: true, error };
         uploaded.push(path);
       }
       save.textContent = "Posting…";
-      const { error } = await sb.from("listings").insert({
+      const id = crypto.randomUUID(); // set here, so a retried post can't make a duplicate
+      const { error } = await retry(() => sb.from("listings").upsert({
+        id,
         user_id: state.user.id,
         seller_name: myName().slice(0, 40),
         title,
@@ -845,7 +870,7 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
         notes: $("f-notes").value.trim(),
         contact,
         photos: uploaded,
-      });
+      }, { onConflict: "id", ignoreDuplicates: true }), save, "Posting");
       if (error) throw { error };
       $("sheet-new").close();
       toast("Listing posted");
@@ -853,7 +878,9 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       setView("mine");
     } catch (e2) {
       if (uploaded.length) sb.storage.from(BUCKET).remove(uploaded);
-      err.textContent = e2?.photo ? "A photo didn't upload. Try a smaller photo or remove it." : "Couldn't post. Check your connection and try again.";
+      err.textContent = e2?.photo
+        ? "A photo didn't upload after 3 tries. The network may be blocking it: press Post listing again, or try without that photo."
+        : "Couldn't post after 3 tries. The network may be blocking it: press Post listing again in a minute.";
     } finally {
       save.disabled = false;
       save.textContent = "Post listing";
