@@ -7,10 +7,12 @@
 -- Run. It's safe to run again ("if not exists" and "drop ... if exists" skip or
 -- replace things that are already there).
 --
--- It makes three things:
+-- It makes five things:
 --   1. a "listings" table: one row per card someone posts
 --   2. security rules saying who can read and change listings
 --   3. a "card-photos" storage area for the photos, with its own rules
+--   4. a "profiles" table with each account's display name
+--   5. a "messages" table for private messages between people
 
 
 -- ===================== 1. The listings table =====================
@@ -131,3 +133,109 @@ drop policy if exists "Users delete their own photos" on storage.objects;
 create policy "Users delete their own photos" on storage.objects
   for delete to authenticated
   using (bucket_id = 'card-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+
+-- ===================== 4. Profiles: names people can message =====================
+-- Account details (like email) are private to Supabase, so each account also
+-- gets a public profile with just its display name. That's how people find
+-- each other to send a message.
+create table if not exists public.profiles (
+  -- The same ID as the account it belongs to.
+  id uuid primary key references auth.users (id) on delete cascade,
+  -- The display name chosen when signing up.
+  name text not null default '' check (char_length(name) <= 40),
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+-- Reading: anyone signed in can see names (but nothing else about the account).
+drop policy if exists "Signed-in users see profiles" on public.profiles;
+create policy "Signed-in users see profiles" on public.profiles
+  for select to authenticated using (true);
+
+-- Changing: only your own profile.
+drop policy if exists "Users edit their own profile" on public.profiles;
+create policy "Users edit their own profile" on public.profiles
+  for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+
+-- A trigger runs automatically when something happens. This one makes a
+-- profile every time a new account is created, using the display name typed
+-- at sign-up (or the start of the email if there isn't one). "security
+-- definer" lets it write to profiles even though the new user isn't signed in
+-- yet. left(..., 40) cuts the name to 40 letters.
+create or replace function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.profiles (id, name)
+  values (new.id, left(coalesce(nullif(new.raw_user_meta_data->>'name', ''), split_part(new.email, '@', 1)), 40))
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Make profiles for accounts that already existed before this was added.
+insert into public.profiles (id, name)
+select id, left(coalesce(nullif(raw_user_meta_data->>'name', ''), split_part(email, '@', 1)), 40)
+from auth.users
+on conflict (id) do nothing;
+
+
+-- ===================== 5. Messages =====================
+-- One row per message sent between two people.
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  -- Who sent it. Always whoever is signed in (the rules below enforce this).
+  sender_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  -- Who it's for.
+  recipient_id uuid not null references auth.users (id) on delete cascade,
+  -- The listing it's about, if it was sent from a listing (optional). "on
+  -- delete set null" keeps the message if the listing is deleted.
+  listing_id uuid references public.listings (id) on delete set null,
+  -- The message itself: 1 to 1000 letters.
+  body text not null check (char_length(body) between 1 and 1000),
+  -- Whether the recipient has seen it.
+  read boolean not null default false,
+  created_at timestamptz not null default now(),
+  -- No messaging yourself.
+  check (sender_id <> recipient_id)
+);
+
+-- Indexes make finding someone's messages fast, like the index in a book.
+create index if not exists messages_sender_idx on public.messages (sender_id, created_at desc);
+create index if not exists messages_recipient_idx on public.messages (recipient_id, created_at desc);
+
+alter table public.messages enable row level security;
+
+-- Reading: only the two people in the conversation.
+drop policy if exists "People read their own messages" on public.messages;
+create policy "People read their own messages" on public.messages
+  for select to authenticated using (auth.uid() = sender_id or auth.uid() = recipient_id);
+
+-- Sending: only as yourself.
+drop policy if exists "People send as themselves" on public.messages;
+create policy "People send as themselves" on public.messages
+  for insert to authenticated with check (auth.uid() = sender_id);
+
+-- Changing: only the recipient, and (with the grants below) only the "read"
+-- column, so nobody can edit what someone else said.
+drop policy if exists "Recipients mark messages read" on public.messages;
+create policy "Recipients mark messages read" on public.messages
+  for update to authenticated using (auth.uid() = recipient_id) with check (auth.uid() = recipient_id);
+revoke insert, update on public.messages from anon, authenticated;
+grant insert (id, sender_id, recipient_id, listing_id, body) on public.messages to authenticated;
+grant update (read) on public.messages to authenticated;
+
+-- Realtime: tells open pages the moment a new message arrives, so chats update
+-- without reloading. (The security rules above still decide who gets what.)
+-- The "exception" part skips this if it was already turned on.
+do $$
+begin
+  alter publication supabase_realtime add table public.messages;
+exception when duplicate_object then null;
+end $$;

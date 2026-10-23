@@ -67,6 +67,8 @@
 
 /* * means every element. border-box makes widths include padding and borders, which makes sizes much easier to predict. */
 * { box-sizing: border-box; }
+/* Anything with the hidden attribute stays hidden, even if a class below gives it a display setting. */
+[hidden] { display: none !important; }
 /* Make the page at least as tall as the screen. */
 html, body { min-height: 100%; }
 /* The page as a whole: no default margin, our background and text colors, and our font. var(--paper) means "use the --paper color from above". */
@@ -311,6 +313,58 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
 /* The "Meet in a public place" reminder. */
 .safety { font-size: 13px; color: var(--muted); margin: 0; }
 
+/* ---------- Messages ---------- */
+/* The red unread count on the Messages tab. */
+.badge { display: inline-block; min-width: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; background: var(--label); color: var(--label-ink); font: 700 11px/18px var(--mono); text-align: center; }
+/* The inbox: the conversation list on the left, the open chat on the right. dvh = the screen's visible height. */
+.inbox { display: grid; grid-template-columns: 300px 1fr; margin-top: 18px; height: calc(100dvh - 150px); min-height: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+/* The left side. min-height: 0 lets its list scroll instead of stretching the page. */
+.inbox-side { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+/* "Messages" and the "New message" button. */
+.inbox-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.inbox-top h2 { margin: 0; font: 900 20px/1.1 var(--display); font-stretch: 118%; }
+/* A scrolling list of conversations (also used for people in "New message"). */
+.convos { flex: 1; overflow-y: auto; }
+/* One conversation: name and time on top, the last message underneath. */
+.convo { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; padding: 10px 14px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; cursor: pointer; }
+.convo:hover, .convo[aria-current="true"] { background: var(--paper); }
+/* Long names and messages get cut off with "...". */
+.convo-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.convo-time { font-size: 12px; color: var(--muted); }
+.convo-last { grid-column: 1 / -1; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Unread conversations are bold, with a red dot by the time. */
+.convo.unread .convo-name, .convo.unread .convo-last { color: var(--ink); font-weight: 700; }
+.convo.unread .convo-time::before { content: "● "; color: var(--label); }
+/* The right side: who you're talking to, the messages, and the box to type in. */
+.thread { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.thread-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-weight: 700; min-height: 51px; }
+/* The ← back button only shows on phones, where the list and the chat take turns. */
+.thread-back { display: none; }
+/* The messages, scrolling, oldest at the top. */
+.thread-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 14px; }
+/* One message bubble: theirs on the left in grey... */
+.bubble { align-self: flex-start; max-width: 78%; padding: 8px 12px; border-radius: 18px; background: var(--paper); white-space: pre-wrap; overflow-wrap: anywhere; }
+/* ...yours on the right in red. */
+.bubble.mine { align-self: flex-end; background: var(--label); color: var(--label-ink); }
+/* The "About: Charizard" line on a message sent from a listing. Clicking it opens the listing. */
+.bubble .about { display: block; padding: 0; margin-bottom: 2px; border: 0; background: none; color: inherit; font-size: 12px; font-weight: 700; opacity: 0.85; text-align: left; text-decoration: underline; cursor: pointer; }
+/* The date and time shown above a group of messages. */
+.stamp { align-self: center; margin: 10px 0 4px; font-size: 11px; color: var(--muted); }
+/* The box at the bottom where you type. */
+.composer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.composer textarea { flex: 1; min-width: 0; height: 40px; max-height: 120px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); resize: none; }
+/* "About: Charizard ✕" above the box, when you came from a listing. */
+.composer-about { flex-basis: 100%; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+/* The text in the middle of an empty chat or list. */
+.inbox-hint { margin: auto; padding: 24px; max-width: 36ch; text-align: center; color: var(--muted); }
+/* On screens narrower than 720px (phones), show one side at a time: the list, or the open chat. */
+@media (max-width: 720px) {
+  .inbox { grid-template-columns: 1fr; }
+  .inbox-side { border-right: 0; }
+  .inbox.has-thread .inbox-side, .inbox:not(.has-thread) .thread { display: none; }
+  .thread-back { display: inline-flex; }
+}
+
 /* The little message that pops up at the bottom for a few seconds, like "Listing posted". position: fixed keeps it in place even while scrolling. */
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 20; max-width: calc(100% - 32px); }
 
@@ -338,11 +392,13 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
       </svg>
       <h1>Toploader</h1>
     </div>
-    <!-- The three tabs. data-view says which part of the page each one shows; the JavaScript reads it. role and aria-... attributes tell screen readers these are tabs. -->
+    <!-- The four tabs. data-view says which part of the page each one shows; the JavaScript reads it. role and aria-... attributes tell screen readers these are tabs. -->
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" id="tab-browse" aria-selected="true" data-view="browse">Browse</button>
       <button class="tab" role="tab" id="tab-value" aria-selected="false" data-view="value">Value lookup</button>
       <button class="tab" role="tab" id="tab-mine" aria-selected="false" data-view="mine">My cards</button>
+      <!-- The JavaScript adds a red unread count to this one. -->
+      <button class="tab" role="tab" id="tab-messages" aria-selected="false" data-view="messages">Messages</button>
     </nav>
     <!-- Empty for now: the JavaScript fills it with "Sign in", or your name and "Sign out". -->
     <div class="account" id="account"></div>
@@ -416,6 +472,35 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
         <li>Look at several recent sales in the same condition, not the single highest one.</li>
         <li>Graded cards (PSA, BGS, CGC) sell for very different prices than raw ones.</li>
       </ul>
+    </div>
+  </section>
+
+  <!-- The Messages tab, hidden until you click it. -->
+  <section id="view-messages" hidden>
+    <!-- Shown instead of the inbox when you're signed out. -->
+    <div id="inbox-empty" style="margin-top:18px"></div>
+    <!-- The inbox. The JavaScript adds the class has-thread when a chat is open (phones use it to show one side at a time). -->
+    <div class="inbox" id="inbox">
+      <div class="inbox-side">
+        <div class="inbox-top">
+          <h2>Messages</h2>
+          <button class="btn small" type="button" id="msg-new">New message</button>
+        </div>
+        <!-- Your conversations, newest first, filled in by the JavaScript. -->
+        <div class="convos" id="convos"></div>
+      </div>
+      <div class="thread">
+        <!-- ← back (phones) and the other person's name. -->
+        <div class="thread-head" id="thread-head"></div>
+        <!-- The message bubbles. -->
+        <div class="thread-body" id="thread-body"></div>
+        <!-- The box to type a message. Enter sends; Shift+Enter starts a new line. -->
+        <form class="composer" id="composer">
+          <div class="composer-about" id="composer-about" hidden></div>
+          <textarea id="msg-text" maxlength="1000" rows="1" placeholder="Write a message…" aria-label="Message"></textarea>
+          <button class="btn primary" type="submit" id="msg-send">Send</button>
+        </form>
+      </div>
     </div>
   </section>
 </div>
@@ -538,6 +623,19 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   <div class="sheet-body" id="detail-body"></div>
 </dialog>
 
+<!-- New message: find someone by name to start a chat with. -->
+<dialog class="sheet narrow" id="sheet-people" aria-labelledby="people-title">
+  <div class="sheet-head">
+    <h2 id="people-title">New message</h2>
+    <button class="btn ghost" type="button" id="people-close" aria-label="Close">✕</button>
+  </div>
+  <div class="sheet-body">
+    <label class="field"><span>Find someone</span><input id="people-q" type="search" placeholder="Type their display name" autocomplete="off"></label>
+    <!-- Matching people, filled in by the JavaScript as you type. -->
+    <div class="convos" id="people-list" style="max-height:320px"></div>
+  </div>
+</dialog>
+
 <!-- The pop-up message at the bottom ("Listing posted"). role="status" makes screen readers read it. -->
 <div class="toast" id="toast" role="status" hidden></div>
 
@@ -612,7 +710,10 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   // Everything the page needs to remember right now: which tab is open (view), the chosen type
   // filter (cat), sale/trade filter (mode), search text (q), sort order, the listings, whether
   // they've loaded, and who's signed in (user, or null).
-  const state = { view: "browse", cat: "All", mode: "all", q: "", sort: "new", listings: [], loaded: false, user: null };
+  const state = { view: "browse", cat: "All", mode: "all", q: "", sort: "new", listings: [], loaded: false, user: null,
+    // For Messages: your messages (oldest first), display names by account ID, the person whose
+    // chat is open (thread, an account ID, or null), and the listing a new message is about (about).
+    messages: [], names: {}, thread: null, about: null };
   // true if listing l was posted by whoever is signed in. Boolean() turns the result into plain
   // true or false.
   const isMine = (l) => Boolean(state.user) && l.user_id === state.user.id;
@@ -734,11 +835,12 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     }
   });
 
-  // Signs you out, and leaves the My cards tab since there's nothing to show there anymore.
+  // Signs you out, and leaves the My cards or Messages tab since there's nothing to show there
+  // anymore.
   async function signOut() {
     await sb.auth.signOut();
     toast("Signed out");
-    if (state.view === "mine") setView("browse");
+    if (state.view === "mine" || state.view === "messages") setView("browse");
   }
 
   // ---------- Views ----------
@@ -749,9 +851,11 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     // querySelectorAll(".tab") finds every tab button. Mark only the chosen one as selected (the
     // CSS makes it dark).
     for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-selected", String(t.dataset.view === view));
-    // Hide the listings on the Value lookup tab, and the other way around.
-    $("view-list").hidden = view === "value";
+    // Show only the part of the page that belongs to this tab. (Browse and My cards share the
+    // listings view.)
+    $("view-list").hidden = view === "value" || view === "messages";
     $("view-value").hidden = view !== "value";
+    $("view-messages").hidden = view !== "messages";
     render();
   }
   // Make each tab switch to its view when clicked. t.dataset.view reads its data-view="..." from
@@ -778,8 +882,11 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   function render() {
     renderChips();
     renderAccount();
+    renderUnread();
     // The Value lookup tab has its own drawing (renderLookup), so stop here.
     if (state.view === "value") return;
+    // So does Messages.
+    if (state.view === "messages") return renderMessages();
     const grid = $("grid");
     // Not connected to the database: say so.
     if (!sb) {
@@ -1039,12 +1146,16 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     // The date it was posted, written the way the viewer's country writes dates.
     add("Listed", new Date(l.created_at).toLocaleDateString());
 
-    // Your own listings get Mark sold and Delete buttons.
+    // Your own listings get Mark sold and Delete buttons. Everyone else's get a button to message
+    // the seller about it.
     const actions = h("div", { class: "sheet-foot" });
     if (isMine(l)) {
       actions.append(
         h("button", { class: "btn", onclick: () => setSold(l, !l.sold) }, l.sold ? "Mark available" : "Mark sold"),
         h("button", { class: "btn danger", onclick: () => confirmDelete(l, actions) }, "Delete"));
+    } else {
+      actions.append(h("button", { class: "btn primary", onclick: () => { $("sheet-detail").close(); openThread(l.user_id, l, l.seller_name); } },
+        "Message " + (l.seller_name || "seller")));
     }
     // Put it all in the pop-up: photos, label, price, facts, notes, contact, a safety tip (on other
     // people's listings), and the buttons. Then open it.
@@ -1287,6 +1398,254 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
     }
   });
 
+  // ---------- Messages ----------
+  // Private chats between two people, like Facebook Messenger. Each message is a row in the
+  // messages table; the database rules only let the sender and recipient read it.
+
+  // The other person in message m (whoever isn't you).
+  const otherIn = (m) => (m.sender_id === state.user.id ? m.recipient_id : m.sender_id);
+  // Someone's display name, or "A collector" if we don't know it.
+  const nameOf = (id) => state.names[id] || "A collector";
+  // How many messages you haven't read yet.
+  const unreadCount = () => (state.user ? state.messages.filter((m) => m.recipient_id === state.user.id && !m.read).length : 0);
+  // A short time for a message: "3:45 PM" if it's from today, otherwise "Oct 21".
+  function when(iso) {
+    const d = new Date(iso);
+    return d.toDateString() === new Date().toDateString()
+      ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      : d.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+
+  // Looks up the display names of any of these accounts we don't know yet, from the profiles table.
+  async function loadNames(ids) {
+    // new Set() drops repeats.
+    const need = [...new Set(ids)].filter((id) => !(id in state.names));
+    if (!need.length) return;
+    const { data } = await sb.from("profiles").select("id, name").in("id", need);
+    for (const p of data || []) state.names[p.id] = p.name;
+  }
+
+  // Downloads your newest 1000 messages (sent and received), and the names of everyone in them.
+  async function loadMessages() {
+    if (!state.user) return;
+    const me = state.user.id;
+    const { data, error } = await sb.from("messages").select("*").order("created_at", { ascending: false }).limit(1000);
+    // Stop if it failed, or if someone else signed in while we were waiting.
+    if (error || state.user?.id !== me) return;
+    // The database gave newest first; .reverse() puts them oldest first, the way a chat reads.
+    state.messages = (data || []).reverse();
+    await loadNames(state.messages.map(otherIn));
+    // If you're looking at a chat, its new messages count as read.
+    if (state.view === "messages" && state.thread && !document.hidden) markRead(state.thread);
+    render();
+  }
+
+  // Adds one new message to the page (one you sent, or one that just arrived). Messages already
+  // shown are skipped, since the same message can arrive twice (once from sending it, once live).
+  async function receive(m) {
+    if (!state.user || state.messages.some((x) => x.id === m.id)) return;
+    state.messages.push(m);
+    const from = m.sender_id;
+    await loadNames([otherIn(m)]);
+    if (from !== state.user.id) {
+      // Looking at this chat right now: mark it read. Otherwise, pop up a notice.
+      if (state.view === "messages" && state.thread === from && !document.hidden) markRead(from);
+      else toast(`New message from ${nameOf(from)}`);
+    }
+    render();
+  }
+
+  // Marks every unread message from this person as read, on the page and in the database.
+  async function markRead(other) {
+    const unread = state.messages.filter((m) => m.sender_id === other && m.recipient_id === state.user.id && !m.read);
+    if (!unread.length) return;
+    unread.forEach((m) => (m.read = true));
+    renderUnread();
+    await sb.from("messages").update({ read: true }).eq("sender_id", other).eq("recipient_id", state.user.id).eq("read", false);
+  }
+
+  // Listens for new messages as they're sent, using Supabase Realtime, so chats update without
+  // reloading. The database rules mean you only ever hear about your own messages.
+  let channel = null;
+  function listen() {
+    if (channel) sb.removeChannel(channel);
+    channel = null;
+    if (!state.user) return;
+    channel = sb.channel("inbox-" + state.user.id)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (p) => receive(p.new))
+      .subscribe();
+  }
+
+  // Opens a chat with this person, switching to the Messages tab. about is the listing it's about
+  // (when you pressed "Message seller"), and name is their display name if we already know it.
+  async function openThread(other, about = null, name = "") {
+    if (!state.user) {
+      toast("Sign in or create an account to send messages.");
+      return openAuth(false);
+    }
+    if (name && !state.names[other]) state.names[other] = name;
+    state.thread = other;
+    state.about = about;
+    setView("messages");
+    await loadNames([other]);
+    markRead(other);
+    render();
+    $("msg-text").focus();
+  }
+
+  // Your conversations, one per person, with the newest at the top. Each has the other person, the
+  // last message, and how many are unread.
+  function conversations() {
+    const map = new Map();
+    for (const m of state.messages) {
+      const other = otherIn(m);
+      const c = map.get(other) || { other, last: null, unread: 0 };
+      c.last = m;
+      if (m.recipient_id === state.user.id && !m.read) c.unread++;
+      map.set(other, c);
+    }
+    // localeCompare sorts the dates as text, which works because they're written year first.
+    return [...map.values()].sort((a, b) => b.last.created_at.localeCompare(a.last.created_at));
+  }
+
+  // Puts the unread count on the Messages tab, and in the browser tab's title.
+  function renderUnread() {
+    const n = unreadCount();
+    $("tab-messages").replaceChildren("Messages", ...(n ? [h("span", { class: "badge", "aria-label": `${n} unread` }, n > 99 ? "99+" : n)] : []));
+    document.title = n ? `(${n}) Toploader` : "Toploader";
+  }
+
+  // Which chat (and how many messages) was last drawn, so we only jump to the bottom when that
+  // changes, not every time the page redraws.
+  let drawn = "";
+  // Draws the Messages tab: the conversation list, and the open chat.
+  function renderMessages() {
+    // Signed out (or not connected): show a message instead of the inbox.
+    const signedOut = !sb || !state.user;
+    $("inbox").hidden = signedOut;
+    $("inbox-empty").hidden = !signedOut;
+    if (signedOut) {
+      return $("inbox-empty").replaceChildren(!sb
+        ? empty("Not connected yet", "This site's database hasn't been set up yet.")
+        : empty("Sign in to message people", "Chat with sellers about their cards, or message anyone on Toploader.",
+            h("button", { class: "btn primary", onclick: () => openAuth(false) }, "Sign in")));
+    }
+    $("inbox").classList.toggle("has-thread", Boolean(state.thread));
+
+    // The conversation list. A chat you just opened with someone new goes at the top, even
+    // before any messages have been sent.
+    const convos = conversations();
+    if (state.thread && !convos.some((c) => c.other === state.thread)) convos.unshift({ other: state.thread, last: null, unread: 0 });
+    $("convos").replaceChildren(...(convos.length
+      ? convos.map((c) => h("button", {
+          class: "convo" + (c.unread ? " unread" : ""), type: "button",
+          "aria-current": String(c.other === state.thread),
+          onclick: () => openThread(c.other),
+        },
+          h("span", { class: "convo-name" }, nameOf(c.other)),
+          h("span", { class: "convo-time" }, c.last ? when(c.last.created_at) : ""),
+          h("span", { class: "convo-last" }, c.last ? (c.last.sender_id === state.user.id ? "You: " : "") + c.last.body : "New conversation")))
+      : [h("p", { class: "inbox-hint" }, "No messages yet. Open a listing and press Message, or start a New message.")]));
+
+    // No chat open: a hint in its place, and no typing box.
+    const body = $("thread-body");
+    $("composer").hidden = !state.thread;
+    if (!state.thread) {
+      $("thread-head").replaceChildren();
+      body.replaceChildren(h("p", { class: "inbox-hint" }, "Pick a conversation to read it."));
+      drawn = "";
+      return;
+    }
+
+    // The top bar: ← back (phones only) and their name.
+    $("thread-head").replaceChildren(
+      h("button", { class: "btn small ghost thread-back", type: "button", "aria-label": "Back to conversations", onclick: () => { state.thread = null; state.about = null; render(); } }, "←"),
+      h("span", {}, nameOf(state.thread)));
+
+    // The messages with this person. A date and time goes above the first one, and above any that
+    // came more than an hour after the one before (3600000 milliseconds = 1 hour).
+    const msgs = state.messages.filter((m) => otherIn(m) === state.thread);
+    const parts = [];
+    msgs.forEach((m, i) => {
+      const t = new Date(m.created_at);
+      if (i === 0 || t - new Date(msgs[i - 1].created_at) > 3600000) {
+        parts.push(h("div", { class: "stamp" }, t.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })));
+      }
+      // If it was sent from a listing that's still up, show "About: ..." linking to it.
+      const l = m.listing_id && state.listings.find((x) => x.id === m.listing_id);
+      parts.push(h("div", { class: "bubble" + (m.sender_id === state.user.id ? " mine" : "") },
+        l ? h("button", { class: "about", type: "button", onclick: () => openDetail(l) }, "About: " + l.title) : null,
+        m.body));
+    });
+    body.replaceChildren(...(parts.length ? parts : [h("p", { class: "inbox-hint" }, `Say hi to ${nameOf(state.thread)}.`)]));
+    // A new chat or a new message: scroll down to the newest one.
+    const key = state.thread + ":" + msgs.length;
+    if (key !== drawn) body.scrollTop = body.scrollHeight;
+    drawn = key;
+
+    // "About: Charizard ✕" above the typing box, when this message will be about a listing.
+    $("composer-about").hidden = !state.about;
+    if (state.about) {
+      $("composer-about").replaceChildren("About: ", h("b", {}, state.about.title),
+        h("button", { class: "btn small ghost", type: "button", "aria-label": "Don't attach the listing", onclick: () => { state.about = null; render(); } }, "✕"));
+    }
+  }
+
+  // Sending a message.
+  $("composer").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = $("msg-text").value.trim();
+    if (!text || !state.thread) return;
+    const btn = $("msg-send");
+    btn.disabled = true;
+    // Give it its ID here, so if the network makes us try twice, it can't be sent twice.
+    const row = { id: crypto.randomUUID(), sender_id: state.user.id, recipient_id: state.thread, listing_id: state.about?.id || null, body: text };
+    const { error } = await retry(() => sb.from("messages").insert(row), btn, "Sending");
+    btn.disabled = false;
+    btn.textContent = "Send";
+    // 23505 means "already there": an earlier try did get through, so it was sent.
+    if (error && error.code !== "23505") return toast("Couldn't send. Check your connection and try again.");
+    $("msg-text").value = "";
+    state.about = null;
+    receive({ ...row, read: false, created_at: new Date().toISOString() });
+  });
+  // Enter sends. Shift+Enter makes a new line instead. (isComposing is true while typing with
+  // an on-screen language keyboard, where Enter picks a word.)
+  $("msg-text").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      $("composer").requestSubmit();
+    }
+  });
+
+  // "New message": search for people by display name.
+  let peopleTimer = null;
+  async function findPeople() {
+    const text = $("people-q").value.trim();
+    // % and _ are wildcards in the search, so put a \ in front of any that were typed.
+    const safe = text.replace(/[%_\\]/g, "\\$&");
+    let query = sb.from("profiles").select("id, name").neq("id", state.user.id).order("name").limit(20);
+    // ilike finds names containing the text, ignoring upper/lower case.
+    if (text) query = query.ilike("name", `%${safe}%`);
+    const { data, error } = await query;
+    // Ignore the answer if the search box changed while we were waiting.
+    if (text !== $("people-q").value.trim()) return;
+    if (error) return $("people-list").replaceChildren(h("p", { class: "form-note" }, "Couldn't search. Try again."));
+    $("people-list").replaceChildren(...(data.length
+      ? data.map((p) => h("button", { class: "convo", type: "button", onclick: () => { $("sheet-people").close(); openThread(p.id, null, p.name); } },
+          h("span", { class: "convo-name" }, p.name || "A collector")))
+      : [h("p", { class: "form-note" }, "No one by that name.")]));
+  }
+  $("msg-new").addEventListener("click", () => {
+    $("people-q").value = "";
+    $("people-list").replaceChildren();
+    $("sheet-people").showModal();
+    findPeople();
+  });
+  // Search 250 milliseconds after typing stops, instead of on every key.
+  $("people-q").addEventListener("input", () => { clearTimeout(peopleTimer); peopleTimer = setTimeout(findPeople, 250); });
+  $("people-close").addEventListener("click", () => $("sheet-people").close());
+
   // ---------- Value lookup ----------
   // Builds the price-site buttons from whatever's typed in the Value lookup boxes.
   function renderLookup() {
@@ -1326,9 +1685,22 @@ dialog.sheet::backdrop { background: rgb(10 14 20 / 0.55); }
   // Supabase tells us whenever you sign in or out (and right away, if you're still signed in from
   // last time). Update who's signed in and redraw.
   sb.auth.onAuthStateChange((_event, session) => {
+    const before = state.user?.id;
     state.user = session?.user || null;
+    // A different person (or nobody) is signed in now: forget the old messages and load theirs.
+    // setTimeout runs it just after this, because Supabase can freeze if we ask it for data
+    // from inside onAuthStateChange.
+    if (state.user?.id !== before) {
+      state.messages = [];
+      state.thread = null;
+      state.about = null;
+      setTimeout(() => { listen(); loadMessages(); }, 0);
+    }
     render();
   });
+  // When you come back to the page (switching apps or tabs), check for messages that the live
+  // connection might have missed, for example if the phone was asleep.
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) loadMessages(); });
   // Draw the page (it says "Loading..." for now)...
   render();
   // ...then download the listings, which redraws it again with the cards.

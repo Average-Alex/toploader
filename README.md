@@ -13,6 +13,7 @@ Works for Pokémon, sports (baseball, basketball, football, hockey), Magic: The 
 - **Search** with suggestions as you type (card names, sets, versions, grades), filters for card type and sale/trade, and sorting by price.
 - **List a card** with up to 4 photos (opens the phone camera), condition or grade, version, price or what you want in trade, and how to reach you.
 - **My cards:** mark a card sold or delete it.
+- **Messages:** private chats, like Facebook Messenger. Press **Message** on any listing to ask the seller about it, or start a **New message** with anyone by their display name. New messages show up live, with an unread count on the tab.
 - **Value lookup:** type a card and jump straight to its sold prices on eBay, PriceCharting, and TCGplayer.
 
 ## Files
@@ -21,7 +22,7 @@ Works for Pokémon, sports (baseball, basketball, football, hockey), Magic: The 
 |---|---|
 | `index.html` | The website |
 | `config.js` | Your Supabase project's URL and public key |
-| `setup.sql` | Creates the database table, photo storage, and security rules |
+| `setup.sql` | Creates the database tables (listings, profiles, messages), photo storage, and security rules |
 | `claude-version.html` | The original version that runs inside Claude, with AI price check |
 
 ## Setting it up
@@ -34,7 +35,9 @@ The site runs on GitHub Pages (free) and stores listings, photos, and accounts i
 4. Open **Authentication > URL Configuration** and set **Site URL** to the live site's address.
 5. Open **Project Settings > API**, copy the **Project URL** and the **anon public** key into `config.js`, and push.
 
-The anon key is meant to be public. The security rules in `setup.sql` let anyone read listings, but only signed-in people can post, and only the person who posted a listing can change or delete it.
+**Already set up before Messages was added?** Run all of `setup.sql` again in the SQL Editor. It's safe to re-run: it only adds what's missing.
+
+The anon key is meant to be public. The security rules in `setup.sql` let anyone read listings, but only signed-in people can post, and only the person who posted a listing can change or delete it. Messages can only be read by the two people in the conversation.
 
 ## Removing a listing
 
